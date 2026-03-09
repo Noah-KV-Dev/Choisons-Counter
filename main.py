@@ -426,24 +426,6 @@ col4.metric("Advance Received", total_adv_received)
 
 st.metric("FINAL CASH IN HAND", final_balance)
 
-# ---------------- CASH SHORTAGE DETECTION ----------------
-
-st.header("Cash Verification")
-
-system_cash = closing  # calculated system balance
-
-difference = closing_cash - system_cash
-
-if closing_cash > 0:
-
-    if difference == 0:
-        st.success("Cash matched ✔ No shortage")
-
-    elif difference < 0:
-        st.error(f"Cash Shortage ₹ {abs(difference)}")
-
-    else:
-        st.warning(f"Extra Cash ₹ {difference}")
 
 
 
