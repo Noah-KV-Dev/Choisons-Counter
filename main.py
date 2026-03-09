@@ -359,28 +359,8 @@ if st.button("Generate Today Report"):
         st.session_state.login = False
         st.rerun()
 
-# ---------------- TOTAL CASH ACCOUNT ----------------
 
-(st.header("Final Cash Account Summary"
 
-final_balance = (opening)
-    + total_receipts
-    - total_payments
-    - total_transfer
-    - total_deposit
-    - total_adv_paid
-    + total_adv_received)
-
-st.subheader("Total Cash Balance")
-
-col1,col2,col3,col4 = st.columns(4)
-
-col1.metric("Total Receipts", total_receipts)
-col2.metric("Total Payments", total_payments)
-col3.metric("Advance Given", total_adv_paid)
-col4.metric("Advance Received", total_adv_received)
-
-st.metric("FINAL CASH IN HAND", final_balance)
 
 
 
