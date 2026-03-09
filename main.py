@@ -364,16 +364,6 @@ if st.button("Generate Today Report"):
 st.header("Final Cash Account Summary")
 
 
-# STAFF ADVANCE DATA
-if not adv_df.empty:
-
-    total_adv_paid = adv_df[adv_df["type"]=="Advance Payment"]["amount"].sum()
-    total_adv_received = adv_df[adv_df["type"]=="Advance Received"]["amount"].sum()
-
-else:
-    total_adv_paid = 0
-    total_adv_received = 0
-
 
 # FINAL CASH BALANCE
 final_balance = (
@@ -396,6 +386,7 @@ col3.metric("Advance Given", total_adv_paid)
 col4.metric("Advance Received", total_adv_received)
 
 st.metric("FINAL CASH IN HAND", final_balance)
+
 
 
 
