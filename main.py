@@ -1,25 +1,33 @@
 import streamlit as st
 import pandas as pd
 import pyrebase
+from datetime import date
 
-# ---------- FIREBASE ----------
-firebase_config = {...}
+# ---------------- PAGE SETTINGS ----------------
+
+st.set_page_config(page_title="Petrol Pump System", layout="wide")
+
+st.title("⛽ Petrol Pump Cash Counter")
+
+# ---------------- FIREBASE CONFIG (FIX FOR ERROR) ----------------
+
+firebase_config = {
+    "apiKey": "YOUR_API_KEY",
+    "authDomain": "YOUR_PROJECT.firebaseapp.com",
+    "databaseURL": "YOUR_DATABASE_URL",
+    "projectId": "YOUR_PROJECT_ID",
+    "storageBucket": "YOUR_PROJECT.appspot.com",
+    "messagingSenderId": "XXXX",
+    "appId": "XXXX"
+}
 
 firebase = pyrebase.initialize_app(firebase_config)
+
 db = firebase.database()
 
-# ---------- APP ----------
-st.title("Petrol Pump Management")
-
-# nozzle code
-# staff code
-# cash counter code
-
-# ================= CASH COUNTER SYSTEM =================
+# ---------------- CASH COUNTER ----------------
 
 st.header("💰 Cash Counter")
-
-# ---------- TRANSACTION ENTRY ----------
 
 col1, col2, col3 = st.columns(3)
 
@@ -37,9 +45,14 @@ with col2:
     )
 
 with col3:
-    cash_date = st.date_input("Date", date.today())
+    cash_date = st.date_input(
+        "Date",
+        date.today()
+    )
 
 note = st.text_input("Description / Note")
+
+# ---------- SAVE TRANSACTION ----------
 
 if st.button("Save Transaction"):
 
@@ -52,8 +65,7 @@ if st.button("Save Transaction"):
 
     db.child("cash_transactions").push(new_transaction)
 
-    st.success("Transaction Saved Successfully")
-
+    st.success("Transaction Saved")
 
 # ---------- LOAD DATA ----------
 
@@ -72,14 +84,13 @@ if cash_data.each():
 
 df_cash = pd.DataFrame(records)
 
-
 # ---------- IF DATA EXISTS ----------
 
 if not df_cash.empty:
 
     df_cash["date"] = pd.to_datetime(df_cash["date"])
 
-    # ---------- TOTAL SUMMARY ----------
+    # ---------- SUMMARY ----------
 
     receipts = df_cash[df_cash["type"]=="Receipt"]["amount"].sum()
     payments = df_cash[df_cash["type"]=="Payment"]["amount"].sum()
@@ -98,13 +109,11 @@ if not df_cash.empty:
     c4.metric("Deposits", f"₹{deposits}")
     c5.metric("Cash Balance", f"₹{cash_balance}")
 
-
     # ---------- TRANSACTION HISTORY ----------
 
     st.subheader("📋 Transaction History")
 
     st.dataframe(df_cash)
-
 
     # ---------- DAILY BALANCE ----------
 
@@ -119,7 +128,6 @@ if not df_cash.empty:
     ).reset_index(name="Daily Balance")
 
     st.dataframe(daily_balance)
-
 
     # ---------- MONTHLY BALANCE ----------
 
@@ -138,46 +146,3 @@ if not df_cash.empty:
     monthly_balance["month"] = monthly_balance["month"].astype(str)
 
     st.dataframe(monthly_balance)
-
-
-# ---------- ADMIN EDIT / DELETE ----------
-
-if role == "Admin" and not df_cash.empty:
-
-    st.subheader("⚙️ Admin Edit / Delete")
-
-    selected_id = st.selectbox(
-        "Select Transaction",
-        df_cash["id"]
-    )
-
-    selected_row = df_cash[df_cash["id"]==selected_id].iloc[0]
-
-    edit_amount = st.number_input(
-        "Edit Amount",
-        value=float(selected_row["amount"])
-    )
-
-    edit_note = st.text_input(
-        "Edit Note",
-        value=selected_row["note"]
-    )
-
-    if st.button("Update Transaction"):
-
-        db.child("cash_transactions").child(selected_id).update({
-            "amount": edit_amount,
-            "note": edit_note
-        })
-
-        st.success("Transaction Updated")
-
-
-    if st.button("Delete Transaction"):
-
-        db.child("cash_transactions").child(selected_id).remove()
-
-        st.warning("Transaction Deleted")
-
-
-
