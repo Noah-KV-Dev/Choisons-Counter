@@ -3,13 +3,11 @@ import pandas as pd
 import pyrebase
 from datetime import date
 
-# ---------------- PAGE SETTINGS ----------------
-
 st.set_page_config(page_title="Petrol Pump System", layout="wide")
 
 st.title("⛽ Petrol Pump Cash Counter")
 
-# ---------------- FIREBASE CONFIG (FIX FOR ERROR) ----------------
+# ---------------- FIREBASE ----------------
 
 firebase_config = {
     "apiKey": "YOUR_API_KEY",
@@ -25,7 +23,7 @@ firebase = pyrebase.initialize_app(firebase_config)
 
 db = firebase.database()
 
-# ---------------- CASH COUNTER ----------------
+# ---------------- CASH ENTRY ----------------
 
 st.header("💰 Cash Counter")
 
@@ -34,7 +32,7 @@ col1, col2, col3 = st.columns(3)
 with col1:
     transaction_type = st.selectbox(
         "Transaction Type",
-        ["Receipt", "Payment", "Bank Transfer", "Bank Deposit"]
+        ["Receipt","Payment","Bank Transfer","Bank Deposit"]
     )
 
 with col2:
@@ -50,9 +48,9 @@ with col3:
         date.today()
     )
 
-note = st.text_input("Description / Note")
+note = st.text_input("Note")
 
-# ---------- SAVE TRANSACTION ----------
+# ---------- SAVE ----------
 
 if st.button("Save Transaction"):
 
@@ -65,7 +63,7 @@ if st.button("Save Transaction"):
 
     db.child("cash_transactions").push(new_transaction)
 
-    st.success("Transaction Saved")
+    st.success("Saved")
 
 # ---------- LOAD DATA ----------
 
@@ -82,44 +80,40 @@ if cash_data.each():
 
         records.append(data)
 
-df_cash = pd.DataFrame(records)
+df = pd.DataFrame(records)
 
-# ---------- IF DATA EXISTS ----------
+# ---------- SHOW DATA ----------
 
-if not df_cash.empty:
+if not df.empty:
 
-    df_cash["date"] = pd.to_datetime(df_cash["date"])
+    df["date"] = pd.to_datetime(df["date"])
 
-    # ---------- SUMMARY ----------
+    receipts = df[df["type"]=="Receipt"]["amount"].sum()
+    payments = df[df["type"]=="Payment"]["amount"].sum()
+    transfers = df[df["type"]=="Bank Transfer"]["amount"].sum()
+    deposits = df[df["type"]=="Bank Deposit"]["amount"].sum()
 
-    receipts = df_cash[df_cash["type"]=="Receipt"]["amount"].sum()
-    payments = df_cash[df_cash["type"]=="Payment"]["amount"].sum()
-    transfers = df_cash[df_cash["type"]=="Bank Transfer"]["amount"].sum()
-    deposits = df_cash[df_cash["type"]=="Bank Deposit"]["amount"].sum()
+    balance = receipts - payments - transfers - deposits
 
-    cash_balance = receipts - payments - transfers - deposits
-
-    st.subheader("📊 Cash Summary")
+    st.subheader("Cash Summary")
 
     c1,c2,c3,c4,c5 = st.columns(5)
 
-    c1.metric("Receipts", f"₹{receipts}")
-    c2.metric("Payments", f"₹{payments}")
-    c3.metric("Transfers", f"₹{transfers}")
-    c4.metric("Deposits", f"₹{deposits}")
-    c5.metric("Cash Balance", f"₹{cash_balance}")
+    c1.metric("Receipts", receipts)
+    c2.metric("Payments", payments)
+    c3.metric("Transfers", transfers)
+    c4.metric("Deposits", deposits)
+    c5.metric("Cash Balance", balance)
 
-    # ---------- TRANSACTION HISTORY ----------
+    st.subheader("Transactions")
 
-    st.subheader("📋 Transaction History")
-
-    st.dataframe(df_cash)
+    st.dataframe(df)
 
     # ---------- DAILY BALANCE ----------
 
-    st.subheader("📅 Daily Balance")
+    st.subheader("Daily Balance")
 
-    daily_balance = df_cash.groupby(df_cash["date"].dt.date).apply(
+    daily = df.groupby(df["date"].dt.date).apply(
         lambda x:
         x[x["type"]=="Receipt"]["amount"].sum()
         - x[x["type"]=="Payment"]["amount"].sum()
@@ -127,15 +121,15 @@ if not df_cash.empty:
         - x[x["type"]=="Bank Deposit"]["amount"].sum()
     ).reset_index(name="Daily Balance")
 
-    st.dataframe(daily_balance)
+    st.dataframe(daily)
 
     # ---------- MONTHLY BALANCE ----------
 
-    st.subheader("📆 Monthly Balance")
+    st.subheader("Monthly Balance")
 
-    df_cash["month"] = df_cash["date"].dt.to_period("M")
+    df["month"] = df["date"].dt.to_period("M")
 
-    monthly_balance = df_cash.groupby("month").apply(
+    monthly = df.groupby("month").apply(
         lambda x:
         x[x["type"]=="Receipt"]["amount"].sum()
         - x[x["type"]=="Payment"]["amount"].sum()
@@ -143,6 +137,6 @@ if not df_cash.empty:
         - x[x["type"]=="Bank Deposit"]["amount"].sum()
     ).reset_index(name="Monthly Balance")
 
-    monthly_balance["month"] = monthly_balance["month"].astype(str)
+    monthly["month"] = monthly["month"].astype(str)
 
-    st.dataframe(monthly_balance)
+    st.dataframe(monthly)
