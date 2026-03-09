@@ -130,6 +130,31 @@ else:
 
     opening = st.number_input("Opening Cash ₹", min_value=0.0)
 
+    # ---------------- PHYSICAL CASH ENTRY ----------------
+
+st.header("Physical Cash Check")
+
+closing_cash = st.number_input("Enter Physical Closing Cash ₹", min_value=0.0)
+
+# ---------------- CASH SHORTAGE DETECTION ----------------
+
+st.header("Cash Verification")
+
+system_cash = closing  # calculated system balance
+
+difference = closing_cash - system_cash
+
+if closing_cash > 0:
+
+    if difference == 0:
+        st.success("Cash matched ✔ No shortage")
+
+    elif difference < 0:
+        st.error(f"Cash Shortage ₹ {abs(difference)}")
+
+    else:
+        st.warning(f"Extra Cash ₹ {difference}")
+
     # ---------------- CASH TRANSACTION ----------------
 
     st.header("Cash Transactions")
@@ -290,6 +315,40 @@ else:
 
         st.dataframe(daily)
 
+        # ---------------- DAILY REPORT ----------------
+
+st.header("Daily Cash Report")
+
+if st.button("Generate Today Report"):
+
+    today = pd.to_datetime(date.today())
+
+    today_data = cash_df[cash_df["date"].dt.date == today.date()]
+
+    if not today_data.empty:
+
+        r = today_data[today_data["type"]=="Receipt"]["amount"].sum()
+        p = today_data[today_data["type"]=="Payment"]["amount"].sum()
+        t = today_data[today_data["type"]=="Bank Transfer"]["amount"].sum()
+        d = today_data[today_data["type"]=="Bank Deposit"]["amount"].sum()
+
+        daily_balance = opening + r - p - t - d
+
+        report = pd.DataFrame({
+            "Opening":[opening],
+            "Receipts":[r],
+            "Payments":[p],
+            "Transfers":[t],
+            "Deposits":[d],
+            "System Balance":[daily_balance],
+            "Physical Cash":[closing_cash]
+        })
+
+        st.dataframe(report)
+
+    else:
+        st.info("No transactions today")
+
         # ---------------- MONTHLY BALANCE ----------------
 
         st.header("Monthly Balance")
@@ -308,6 +367,23 @@ else:
         monthly["month"] = monthly["month"].astype(str)
 
         st.dataframe(monthly)
+
+# ---------------- MONTHLY CASH ACCOUNT ----------------
+
+st.header("Monthly Cash Account")
+
+if not cash_df.empty:
+
+    cash_df["month"] = cash_df["date"].dt.to_period("M")
+
+    monthly_account = cash_df.groupby("month").agg({
+        "amount":"sum"
+    }).reset_index()
+
+    monthly_account["month"] = monthly_account["month"].astype(str)
+
+    st.dataframe(monthly_account)
+    
 
     # ---------------- LOGOUT ----------------
 
@@ -367,5 +443,6 @@ col3.metric("Advance Given", total_adv_paid)
 col4.metric("Advance Received", total_adv_received)
 
 st.metric("FINAL CASH IN HAND", final_balance)
+
 
 
