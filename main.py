@@ -366,8 +366,7 @@ st.header("Final Cash Account Summary")
 
 
 # FINAL CASH BALANCE
-final_balance = (
-    opening
+final_balance = (opening)
     + total_receipts
     - total_payments
     - total_transfer
@@ -386,6 +385,7 @@ col3.metric("Advance Given", total_adv_paid)
 col4.metric("Advance Received", total_adv_received)
 
 st.metric("FINAL CASH IN HAND", final_balance)
+
 
 
 
