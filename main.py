@@ -240,11 +240,39 @@ else:
     c5.metric("Deposits", deposits)
     c6.metric("System Cash", closing)
 
-    # ---------------- TRANSACTION HISTORY ----------------
+  # ---------------- TRANSACTION HISTORY ----------------
 
-    st.header("Transaction History")
-    st.dataframe(cash_df)
+st.header("Transaction History")
 
+if not cash_df.empty:
+
+    # Create opening transaction row
+    opening_row = pd.DataFrame({
+        "id": ["-"],
+        "date": [pd.to_datetime(date.today())],
+        "cashier": ["SYSTEM"],
+        "type": ["Opening Balance"],
+        "amount": [opening],
+        "note": ["Opening Cash"]
+    })
+
+    # Combine opening with real transactions
+    display_df = pd.concat([opening_row, cash_df], ignore_index=True)
+
+    st.dataframe(display_df)
+
+else:
+
+    opening_row = pd.DataFrame({
+        "id": ["-"],
+        "date": [pd.to_datetime(date.today())],
+        "cashier": ["SYSTEM"],
+        "type": ["Opening Balance"],
+        "amount": [opening],
+        "note": ["Opening Cash"]
+    })
+
+    st.dataframe(opening_row)
     # ---------------- PHYSICAL CASH CHECK ----------------
 
     st.header("Physical Cash Check")
@@ -296,3 +324,4 @@ else:
     if st.button("Logout"):
         st.session_state.login = False
         st.rerun()
+
