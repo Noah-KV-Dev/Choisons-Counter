@@ -5,7 +5,10 @@ from datetime import date
 
 st.set_page_config(page_title="Petrol Pump Cash System", layout="wide")
 st.title("⛽ Petrol Pump Cash Counter")
-st.write("              Created By Nazeeh")
+col1, col2, col3 = st.columns([1, 2, 1]) # Adjust the ratio as needed
+with col3
+    st.write("              Created By Nazeeh")
+
 # ---------------- DATABASE ----------------
 
 conn = sqlite3.connect("petrol_cash.db", check_same_thread=False)
@@ -315,6 +318,7 @@ else:
 
         st.session_state.login = False
         st.rerun()
+
 
 
 
