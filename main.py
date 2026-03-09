@@ -3,31 +3,15 @@ import pandas as pd
 import sqlite3
 from datetime import date
 
-st.set_page_config(page_title="Petrol Pump System", layout="wide")
+st.set_page_config(page_title="Cash Counter", layout="wide")
 
-st.title("⛽ Petrol Pump Management System")
+st.title("💰 Petrol Pump Cash Counter")
 
 # ---------------- DATABASE ----------------
 
-conn = sqlite3.connect("petrol_pump.db", check_same_thread=False)
+conn = sqlite3.connect("cash_counter.db", check_same_thread=False)
 cursor = conn.cursor()
 
-# Fuel sales table
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS fuel_sales(
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-date TEXT,
-staff TEXT,
-fuel TEXT,
-opening REAL,
-closing REAL,
-litres REAL,
-price REAL,
-total REAL
-)
-""")
-
-# Cash counter table
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS cash_transactions(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,70 +24,29 @@ note TEXT
 
 conn.commit()
 
-# ---------------- FUEL SALES ----------------
+# ---------------- OPENING BALANCE ----------------
 
-st.header("⛽ Fuel Sales Entry")
+st.header("Opening Balance")
+
+opening_balance = st.number_input("Opening Cash Balance ₹", min_value=0.0)
+
+# ---------------- CASH TRANSACTION ENTRY ----------------
+
+st.header("Cash Entry")
 
 col1,col2,col3 = st.columns(3)
 
 with col1:
-    sale_date = st.date_input("Date",date.today())
-    staff = st.text_input("Staff Name")
+    transaction_type = st.selectbox(
+        "Transaction Type",
+        ["Receipt","Payment","Bank Transfer","Bank Deposit"]
+    )
 
 with col2:
-    fuel = st.selectbox("Fuel Type",["Petrol","Diesel","Power Petrol"])
-    price = st.number_input("Price per Litre",min_value=0.0)
+    amount = st.number_input("Amount ₹", min_value=0.0)
 
 with col3:
-    opening = st.number_input("Opening Meter",min_value=0.0)
-    closing = st.number_input("Closing Meter",min_value=0.0)
-
-litres = closing - opening
-
-if litres < 0:
-    litres = 0
-
-total = litres * price
-
-st.write("Litres Sold:", litres)
-st.write("Total Sale: ₹", total)
-
-if st.button("Save Fuel Sale"):
-
-    cursor.execute(
-    "INSERT INTO fuel_sales (date,staff,fuel,opening,closing,litres,price,total) VALUES (?,?,?,?,?,?,?,?)",
-    (str(sale_date),staff,fuel,opening,closing,litres,price,total)
-    )
-
-    conn.commit()
-
-    st.success("Fuel Sale Saved")
-
-# ---------------- SALES HISTORY ----------------
-
-st.subheader("Fuel Sales Records")
-
-sales_df = pd.read_sql("SELECT * FROM fuel_sales",conn)
-
-st.dataframe(sales_df,use_container_width=True)
-
-# ---------------- CASH COUNTER ----------------
-
-st.header("💰 Cash Counter")
-
-c1,c2,c3 = st.columns(3)
-
-with c1:
-    transaction_type = st.selectbox(
-    "Transaction Type",
-    ["Receipt","Payment","Bank Transfer","Bank Deposit"]
-    )
-
-with c2:
-    amount = st.number_input("Amount ₹",min_value=0.0)
-
-with c3:
-    cash_date = st.date_input("Cash Date",date.today())
+    trans_date = st.date_input("Date", date.today())
 
 note = st.text_input("Note")
 
@@ -111,53 +54,56 @@ if st.button("Save Transaction"):
 
     cursor.execute(
     "INSERT INTO cash_transactions (date,type,amount,note) VALUES (?,?,?,?)",
-    (str(cash_date),transaction_type,amount,note)
+    (str(trans_date),transaction_type,amount,note)
     )
 
     conn.commit()
 
     st.success("Transaction Saved")
 
-# ---------------- CASH DATA ----------------
+# ---------------- LOAD DATA ----------------
 
-cash_df = pd.read_sql("SELECT * FROM cash_transactions",conn)
+df = pd.read_sql("SELECT * FROM cash_transactions", conn)
 
-if not cash_df.empty:
+if not df.empty:
 
-    cash_df["date"] = pd.to_datetime(cash_df["date"])
+    df["date"] = pd.to_datetime(df["date"])
 
-    receipts = cash_df[cash_df["type"]=="Receipt"]["amount"].sum()
-    payments = cash_df[cash_df["type"]=="Payment"]["amount"].sum()
-    transfers = cash_df[cash_df["type"]=="Bank Transfer"]["amount"].sum()
-    deposits = cash_df[cash_df["type"]=="Bank Deposit"]["amount"].sum()
+    receipts = df[df["type"]=="Receipt"]["amount"].sum()
+    payments = df[df["type"]=="Payment"]["amount"].sum()
+    transfers = df[df["type"]=="Bank Transfer"]["amount"].sum()
+    deposits = df[df["type"]=="Bank Deposit"]["amount"].sum()
 
-    balance = receipts - payments - transfers - deposits
+    closing_balance = opening_balance + receipts - payments - transfers - deposits
 
-    st.subheader("Cash Summary")
+    st.header("Cash Summary")
 
     a,b,c,d,e = st.columns(5)
 
-    a.metric("Receipts",receipts)
-    b.metric("Payments",payments)
-    c.metric("Transfers",transfers)
-    d.metric("Deposits",deposits)
-    e.metric("Cash Balance",balance)
+    a.metric("Opening Balance", opening_balance)
+    b.metric("Receipts", receipts)
+    c.metric("Payments", payments)
+    d.metric("Bank Transfers", transfers)
+    e.metric("Bank Deposits", deposits)
+
+    st.metric("Closing Cash Balance", closing_balance)
 
 # ---------------- TRANSACTION HISTORY ----------------
 
-st.subheader("Cash Transactions")
+st.header("Transaction History")
 
-st.dataframe(cash_df,use_container_width=True)
+st.dataframe(df,use_container_width=True)
 
 # ---------------- DAILY BALANCE ----------------
 
-if not cash_df.empty:
+if not df.empty:
 
-    st.subheader("📅 Daily Balance")
+    st.header("Daily Balance")
 
-    daily = cash_df.groupby(cash_df["date"].dt.date).apply(
+    daily = df.groupby(df["date"].dt.date).apply(
     lambda x:
-    x[x["type"]=="Receipt"]["amount"].sum()
+    opening_balance
+    + x[x["type"]=="Receipt"]["amount"].sum()
     - x[x["type"]=="Payment"]["amount"].sum()
     - x[x["type"]=="Bank Transfer"]["amount"].sum()
     - x[x["type"]=="Bank Deposit"]["amount"].sum()
@@ -167,13 +113,14 @@ if not cash_df.empty:
 
 # ---------------- MONTHLY BALANCE ----------------
 
-    st.subheader("📆 Monthly Balance")
+    st.header("Monthly Balance")
 
-    cash_df["month"] = cash_df["date"].dt.to_period("M")
+    df["month"] = df["date"].dt.to_period("M")
 
-    monthly = cash_df.groupby("month").apply(
+    monthly = df.groupby("month").apply(
     lambda x:
-    x[x["type"]=="Receipt"]["amount"].sum()
+    opening_balance
+    + x[x["type"]=="Receipt"]["amount"].sum()
     - x[x["type"]=="Payment"]["amount"].sum()
     - x[x["type"]=="Bank Transfer"]["amount"].sum()
     - x[x["type"]=="Bank Deposit"]["amount"].sum()
