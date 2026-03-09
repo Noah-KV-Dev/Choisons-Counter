@@ -111,3 +111,35 @@ if role == "Admin":
             st.warning("Transaction Deleted")
 
 
+# ---------- DAILY BALANCE ----------
+
+st.subheader("📅 Daily Balance")
+
+df_cash["date"] = pd.to_datetime(df_cash["date"])
+
+daily_balance = df_cash.groupby(df_cash["date"].dt.date).apply(
+    lambda x: x[x["type"]=="Receipt"]["amount"].sum()
+    - x[x["type"]=="Payment"]["amount"].sum()
+    - x[x["type"]=="Bank Transfer"]["amount"].sum()
+    - x[x["type"]=="Bank Deposit"]["amount"].sum()
+).reset_index(name="daily_balance")
+
+st.dataframe(daily_balance)
+
+
+# ---------- MONTHLY BALANCE ----------
+
+st.subheader("📆 Monthly Balance")
+
+df_cash["month"] = df_cash["date"].dt.to_period("M")
+
+monthly_balance = df_cash.groupby("month").apply(
+    lambda x: x[x["type"]=="Receipt"]["amount"].sum()
+    - x[x["type"]=="Payment"]["amount"].sum()
+    - x[x["type"]=="Bank Transfer"]["amount"].sum()
+    - x[x["type"]=="Bank Deposit"]["amount"].sum()
+).reset_index(name="monthly_balance")
+
+monthly_balance["month"] = monthly_balance["month"].astype(str)
+
+st.dataframe(monthly_balance)
