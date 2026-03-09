@@ -1,3 +1,7 @@
+import streamlit as st
+import pandas as pd
+
+
 # ---------------- CASH BALANCE ACCOUNT ----------------
 
 st.header("💰 Cash Balance Account")
@@ -104,3 +108,4 @@ if role == "Admin":
             db.child("cash_transactions").child(selected_id).remove()
 
             st.warning("Transaction Deleted")
+
