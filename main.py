@@ -130,85 +130,81 @@ else:
 
     opening = st.number_input("Opening Cash ₹", min_value=0.0)
 
-    # ---------------- PHYSICAL CASH ENTRY ----------------
-
-st.header("Physical Cash Check")
-
-closing_cash = st.number_input("Enter Physical Closing Cash ₹", min_value=0.0)
-
-
     # ---------------- CASH TRANSACTION ----------------
 
-st.header("Cash Transactions")
+    st.header("Cash Transactions")
 
-col1,col2,col3 = st.columns(3)
+    col1,col2,col3 = st.columns(3)
 
-with col1:
-    t_type = st.selectbox(
-    "Transaction Type",
-    ["Receipt","Payment","Bank Transfer","Bank Deposit"]
-    )
+    with col1:
+        t_type = st.selectbox(
+        "Transaction Type",
+        ["Receipt","Payment","Bank Transfer","Bank Deposit"]
+        )
 
-with col2:
-    amount = st.number_input("Amount ₹", min_value=0.0)
+    with col2:
+        amount = st.number_input("Amount ₹", min_value=0.0)
 
-with col3:
-    t_date = st.date_input("Date",date.today())
+    with col3:
+        t_date = st.date_input("Date",date.today())
 
-note = st.text_input("Note")
+    note = st.text_input("Note")
 
-if st.button("Save Transaction"):
+    if st.button("Save Transaction"):
 
-    cursor.execute(
-    "INSERT INTO cash_transactions (date,cashier,type,amount,note) VALUES (?,?,?,?,?)",
-    (str(t_date),st.session_state.user,t_type,amount,note)
-    )
+        cursor.execute(
+        "INSERT INTO cash_transactions (date,cashier,type,amount,note) VALUES (?,?,?,?,?)",
+        (str(t_date),st.session_state.user,t_type,amount,note)
+        )
 
-    conn.commit()
+        conn.commit()
 
-    st.success("Transaction saved")
+        st.success("Transaction saved")
 
     # ---------------- STAFF ADVANCE ----------------
 
-st.header("Staff Advance")
+    st.header("Staff Advance")
 
-a1,a2,a3,a4 = st.columns(4)
+    a1,a2,a3,a4 = st.columns(4)
 
-with a1:
-    staff = st.text_input("Staff Name")
+    with a1:
+        staff = st.text_input("Staff Name")
 
-with a2:
-    adv_type = st.selectbox(
-    "Type",
-    ["Advance Payment","Advance Received"]
-    )
+    with a2:
+        adv_type = st.selectbox(
+        "Type",
+        ["Advance Payment","Advance Received"]
+        )
 
-with a3:
-    adv_amt = st.number_input("Advance Amount ₹",min_value=0.0)
+    with a3:
+        adv_amt = st.number_input("Advance Amount ₹",min_value=0.0)
 
-with a4:
-    adv_date = st.date_input("Advance Date",date.today())
+    with a4:
+        adv_date = st.date_input("Advance Date",date.today())
 
-adv_note = st.text_input("Advance Note")
+    adv_note = st.text_input("Advance Note")
 
-if st.button("Save Advance"):
+    if st.button("Save Advance"):
 
-    cursor.execute(
-    "INSERT INTO staff_advance (date,staff,type,amount,note) VALUES (?,?,?,?,?)",
-    (str(adv_date),staff,adv_type,adv_amt,adv_note)
-    )
+        cursor.execute(
+        "INSERT INTO staff_advance (date,staff,type,amount,note) VALUES (?,?,?,?,?)",
+        (str(adv_date),staff,adv_type,adv_amt,adv_note)
+        )
 
-    conn.commit()
+        conn.commit()
 
-    st.success("Advance saved")
+        st.success("Advance saved")
 
     # ---------------- LOAD DATA ----------------
 
     cash_df = pd.read_sql("SELECT * FROM cash_transactions",conn)
 
     if not cash_df.empty:
-
         cash_df["date"] = pd.to_datetime(cash_df["date"])
+
+    receipts = payments = transfers = deposits = closing = 0
+
+    if not cash_df.empty:
 
         receipts = cash_df[cash_df["type"]=="Receipt"]["amount"].sum()
         payments = cash_df[cash_df["type"]=="Payment"]["amount"].sum()
@@ -297,40 +293,6 @@ if st.button("Save Advance"):
 
         st.dataframe(daily)
 
-        # ---------------- DAILY REPORT ----------------
-
-st.header("Daily Cash Report")
-
-if st.button("Generate Today Report"):
-
-    today = pd.to_datetime(date.today())
-
-today_data = cash_df[cash_df["date"].dt.date == today.date()]
-
-if not today_data.empty:
-
-  r = today_data[today_data["type"]=="Receipt"]["amount"].sum()   
-  p = today_data[today_data["type"]=="Payment"]["amount"].sum()
-  t = today_data[today_data["type"]=="Bank Transfer"]["amount"].sum()
-  d = today_data[today_data["type"]=="Bank Deposit"]["amount"].sum()
-
-daily_balance = opening + r - p - t - d
-
- report = pd.DataFrame({
-     "Opening":[opening],
-     "Receipts":[r],
-     "Payments":[p],
-     "Transfers":[t],
-     "Deposits":[d],
-     "System Balance":[daily_balance],
-     "Physical Cash":[closing_cash]
-        })
-
-        st.dataframe(report)
-
-    else:
-        st.info("No transactions today")
-
         # ---------------- MONTHLY BALANCE ----------------
 
         st.header("Monthly Balance")
@@ -350,7 +312,87 @@ daily_balance = opening + r - p - t - d
 
         st.dataframe(monthly)
 
+    # ---------------- PHYSICAL CASH ENTRY ----------------
 
+    st.header("Physical Cash Check")
+
+    closing_cash = st.number_input("Enter Physical Closing Cash ₹", min_value=0.0)
+
+    # ---------------- CASH SHORTAGE DETECTION ----------------
+
+    st.header("Cash Verification")
+
+    system_cash = closing
+
+    difference = closing_cash - system_cash
+
+    if closing_cash > 0:
+
+        if difference == 0:
+            st.success("Cash matched ✔ No shortage")
+
+        elif difference < 0:
+            st.error(f"Cash Shortage ₹ {abs(difference)}")
+
+        else:
+            st.warning(f"Extra Cash ₹ {difference}")
+
+    # ---------------- DAILY REPORT ----------------
+
+    st.header("Daily Cash Report")
+
+    if st.button("Generate Today Report"):
+
+        if not cash_df.empty:
+
+            today = pd.to_datetime(date.today())
+
+            today_data = cash_df[cash_df["date"].dt.date == today.date()]
+
+            if not today_data.empty:
+
+                r = today_data[today_data["type"]=="Receipt"]["amount"].sum()
+                p = today_data[today_data["type"]=="Payment"]["amount"].sum()
+                t = today_data[today_data["type"]=="Bank Transfer"]["amount"].sum()
+                d = today_data[today_data["type"]=="Bank Deposit"]["amount"].sum()
+
+                daily_balance = opening + r - p - t - d
+
+                report = pd.DataFrame({
+                    "Opening":[opening],
+                    "Receipts":[r],
+                    "Payments":[p],
+                    "Transfers":[t],
+                    "Deposits":[d],
+                    "System Balance":[daily_balance],
+                    "Physical Cash":[closing_cash]
+                })
+
+                st.dataframe(report)
+
+            else:
+                st.info("No transactions today")
+
+        else:
+            st.info("No transactions available")
+
+    # ---------------- MONTHLY CASH ACCOUNT ----------------
+
+    st.header("Monthly Cash Account")
+
+    if not cash_df.empty:
+
+        cash_df["month"] = cash_df["date"].dt.to_period("M")
+
+        monthly_account = (
+            cash_df.groupby("month")["amount"]
+            .sum()
+            .reset_index()
+        )
+
+        monthly_account["month"] = monthly_account["month"].astype(str)
+
+        st.dataframe(monthly_account)
 
     # ---------------- LOGOUT ----------------
 
@@ -358,20 +400,3 @@ daily_balance = opening + r - p - t - d
 
         st.session_state.login = False
         st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
