@@ -350,21 +350,7 @@ if st.button("Generate Today Report"):
 
         st.dataframe(monthly)
 
-# ---------------- MONTHLY CASH ACCOUNT ----------------
 
-st.header("Monthly Cash Account")
-
-if not cash_df.empty:
-
-    cash_df["month"] = cash_df["date"].dt.to_period("M")
-
-    monthly_account = cash_df.groupby("month").agg({
-        "amount":"sum"
-    }).reset_index()
-
-    monthly_account["month"] = monthly_account["month"].astype(str)
-
-    st.dataframe(monthly_account)
 
     # ---------------- LOGOUT ----------------
 
@@ -424,6 +410,7 @@ col3.metric("Advance Given", total_adv_paid)
 col4.metric("Advance Received", total_adv_received)
 
 st.metric("FINAL CASH IN HAND", final_balance)
+
 
 
 
