@@ -5,7 +5,7 @@ from datetime import date
 
 st.set_page_config(page_title="Petrol Pump Cash System", layout="wide")
 st.title("⛽ Petrol Pump Cash Counter")
-st.subheader("              Created By Nazeeh")
+st.write("              Created By Nazeeh")
 # ---------------- DATABASE ----------------
 
 conn = sqlite3.connect("petrol_cash.db", check_same_thread=False)
@@ -315,6 +315,7 @@ else:
 
         st.session_state.login = False
         st.rerun()
+
 
 
 
