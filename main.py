@@ -6,7 +6,7 @@ from datetime import date
 st.set_page_config(page_title="Petrol Pump Cash System", layout="wide")
 st.title("⛽ Petrol Pump Cash Counter")
 col1, col2, col3 = st.columns([1, 2, 1]) # Adjust the ratio as needed
-with col3
+with col1
     st.write("              Created By Nazeeh")
 
 # ---------------- DATABASE ----------------
@@ -318,6 +318,7 @@ else:
 
         st.session_state.login = False
         st.rerun()
+
 
 
 
