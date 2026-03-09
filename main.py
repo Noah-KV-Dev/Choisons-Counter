@@ -139,68 +139,68 @@ closing_cash = st.number_input("Enter Physical Closing Cash ₹", min_value=0.0)
 
     # ---------------- CASH TRANSACTION ----------------
 
-    st.header("Cash Transactions")
+st.header("Cash Transactions")
 
-    col1,col2,col3 = st.columns(3)
+col1,col2,col3 = st.columns(3)
 
-    with col1:
-        t_type = st.selectbox(
-        "Transaction Type",
-        ["Receipt","Payment","Bank Transfer","Bank Deposit"]
-        )
+with col1:
+    t_type = st.selectbox(
+    "Transaction Type",
+    ["Receipt","Payment","Bank Transfer","Bank Deposit"]
+    )
 
-    with col2:
-        amount = st.number_input("Amount ₹", min_value=0.0)
+with col2:
+    amount = st.number_input("Amount ₹", min_value=0.0)
 
-    with col3:
-        t_date = st.date_input("Date",date.today())
+with col3:
+    t_date = st.date_input("Date",date.today())
 
-    note = st.text_input("Note")
+note = st.text_input("Note")
 
-    if st.button("Save Transaction"):
+if st.button("Save Transaction"):
 
-        cursor.execute(
-        "INSERT INTO cash_transactions (date,cashier,type,amount,note) VALUES (?,?,?,?,?)",
-        (str(t_date),st.session_state.user,t_type,amount,note)
-        )
+    cursor.execute(
+    "INSERT INTO cash_transactions (date,cashier,type,amount,note) VALUES (?,?,?,?,?)",
+    (str(t_date),st.session_state.user,t_type,amount,note)
+    )
 
-        conn.commit()
+    conn.commit()
 
-        st.success("Transaction saved")
+    st.success("Transaction saved")
 
     # ---------------- STAFF ADVANCE ----------------
 
-    st.header("Staff Advance")
+st.header("Staff Advance")
 
-    a1,a2,a3,a4 = st.columns(4)
+a1,a2,a3,a4 = st.columns(4)
 
-    with a1:
-        staff = st.text_input("Staff Name")
+with a1:
+    staff = st.text_input("Staff Name")
 
-    with a2:
-        adv_type = st.selectbox(
-        "Type",
-        ["Advance Payment","Advance Received"]
-        )
+with a2:
+    adv_type = st.selectbox(
+    "Type",
+    ["Advance Payment","Advance Received"]
+    )
 
-    with a3:
-        adv_amt = st.number_input("Advance Amount ₹",min_value=0.0)
+with a3:
+    adv_amt = st.number_input("Advance Amount ₹",min_value=0.0)
 
-    with a4:
-        adv_date = st.date_input("Advance Date",date.today())
+with a4:
+    adv_date = st.date_input("Advance Date",date.today())
 
-    adv_note = st.text_input("Advance Note")
+adv_note = st.text_input("Advance Note")
 
-    if st.button("Save Advance"):
+if st.button("Save Advance"):
 
-        cursor.execute(
-        "INSERT INTO staff_advance (date,staff,type,amount,note) VALUES (?,?,?,?,?)",
-        (str(adv_date),staff,adv_type,adv_amt,adv_note)
-        )
+    cursor.execute(
+    "INSERT INTO staff_advance (date,staff,type,amount,note) VALUES (?,?,?,?,?)",
+    (str(adv_date),staff,adv_type,adv_amt,adv_note)
+    )
 
-        conn.commit()
+    conn.commit()
 
-        st.success("Advance saved")
+    st.success("Advance saved")
 
     # ---------------- LOAD DATA ----------------
 
@@ -425,6 +425,7 @@ col3.metric("Advance Given", total_adv_paid)
 col4.metric("Advance Received", total_adv_received)
 
 st.metric("FINAL CASH IN HAND", final_balance)
+
 
 
 
