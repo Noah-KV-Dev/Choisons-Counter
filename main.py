@@ -136,24 +136,6 @@ st.header("Physical Cash Check")
 
 closing_cash = st.number_input("Enter Physical Closing Cash ₹", min_value=0.0)
 
-# ---------------- CASH SHORTAGE DETECTION ----------------
-
-st.header("Cash Verification")
-
-system_cash = closing  # calculated system balance
-
-difference = closing_cash - system_cash
-
-if closing_cash > 0:
-
-    if difference == 0:
-        st.success("Cash matched ✔ No shortage")
-
-    elif difference < 0:
-        st.error(f"Cash Shortage ₹ {abs(difference)}")
-
-    else:
-        st.warning(f"Extra Cash ₹ {difference}")
 
     # ---------------- CASH TRANSACTION ----------------
 
@@ -443,6 +425,25 @@ col3.metric("Advance Given", total_adv_paid)
 col4.metric("Advance Received", total_adv_received)
 
 st.metric("FINAL CASH IN HAND", final_balance)
+
+# ---------------- CASH SHORTAGE DETECTION ----------------
+
+st.header("Cash Verification")
+
+system_cash = closing  # calculated system balance
+
+difference = closing_cash - system_cash
+
+if closing_cash > 0:
+
+    if difference == 0:
+        st.success("Cash matched ✔ No shortage")
+
+    elif difference < 0:
+        st.error(f"Cash Shortage ₹ {abs(difference)}")
+
+    else:
+        st.warning(f"Extra Cash ₹ {difference}")
 
 
 
