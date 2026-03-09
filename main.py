@@ -305,25 +305,25 @@ if st.button("Generate Today Report"):
 
     today = pd.to_datetime(date.today())
 
-    today_data = cash_df[cash_df["date"].dt.date == today.date()]
+today_data = cash_df[cash_df["date"].dt.date == today.date()]
 
-    if not today_data.empty:
+if not today_data.empty:
 
-        r = today_data[today_data["type"]=="Receipt"]["amount"].sum()
-        p = today_data[today_data["type"]=="Payment"]["amount"].sum()
-        t = today_data[today_data["type"]=="Bank Transfer"]["amount"].sum()
-        d = today_data[today_data["type"]=="Bank Deposit"]["amount"].sum()
+  r = today_data[today_data["type"]=="Receipt"]["amount"].sum()   
+  p = today_data[today_data["type"]=="Payment"]["amount"].sum()
+  t = today_data[today_data["type"]=="Bank Transfer"]["amount"].sum()
+  d = today_data[today_data["type"]=="Bank Deposit"]["amount"].sum()
 
-        daily_balance = opening + r - p - t - d
+daily_balance = opening + r - p - t - d
 
-        report = pd.DataFrame({
-            "Opening":[opening],
-            "Receipts":[r],
-            "Payments":[p],
-            "Transfers":[t],
-            "Deposits":[d],
-            "System Balance":[daily_balance],
-            "Physical Cash":[closing_cash]
+ report = pd.DataFrame({
+     "Opening":[opening],
+     "Receipts":[r],
+     "Payments":[p],
+     "Transfers":[t],
+     "Deposits":[d],
+     "System Balance":[daily_balance],
+     "Physical Cash":[closing_cash]
         })
 
         st.dataframe(report)
@@ -358,6 +358,7 @@ if st.button("Generate Today Report"):
 
         st.session_state.login = False
         st.rerun()
+
 
 
 
