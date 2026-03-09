@@ -1,142 +1,184 @@
 import streamlit as st
 import pandas as pd
-import pyrebase
+import sqlite3
 from datetime import date
 
 st.set_page_config(page_title="Petrol Pump System", layout="wide")
 
-st.title("⛽ Petrol Pump Cash Counter")
+st.title("⛽ Petrol Pump Management System")
 
-# ---------------- FIREBASE ----------------
+# ---------------- DATABASE ----------------
 
-firebase_config = {
-    "apiKey": "YOUR_API_KEY",
-    "authDomain": "YOUR_PROJECT.firebaseapp.com",
-    "databaseURL": "YOUR_DATABASE_URL",
-    "projectId": "YOUR_PROJECT_ID",
-    "storageBucket": "YOUR_PROJECT.appspot.com",
-    "messagingSenderId": "XXXX",
-    "appId": "XXXX"
-}
+conn = sqlite3.connect("petrol_pump.db", check_same_thread=False)
+cursor = conn.cursor()
 
-firebase = pyrebase.initialize_app(firebase_config)
+# Fuel sales table
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS fuel_sales(
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+date TEXT,
+staff TEXT,
+fuel TEXT,
+opening REAL,
+closing REAL,
+litres REAL,
+price REAL,
+total REAL
+)
+""")
 
-db = firebase.database()
+# Cash counter table
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS cash_transactions(
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+date TEXT,
+type TEXT,
+amount REAL,
+note TEXT
+)
+""")
 
-# ---------------- CASH ENTRY ----------------
+conn.commit()
+
+# ---------------- FUEL SALES ----------------
+
+st.header("⛽ Fuel Sales Entry")
+
+col1,col2,col3 = st.columns(3)
+
+with col1:
+    sale_date = st.date_input("Date",date.today())
+    staff = st.text_input("Staff Name")
+
+with col2:
+    fuel = st.selectbox("Fuel Type",["Petrol","Diesel","Power Petrol"])
+    price = st.number_input("Price per Litre",min_value=0.0)
+
+with col3:
+    opening = st.number_input("Opening Meter",min_value=0.0)
+    closing = st.number_input("Closing Meter",min_value=0.0)
+
+litres = closing - opening
+
+if litres < 0:
+    litres = 0
+
+total = litres * price
+
+st.write("Litres Sold:", litres)
+st.write("Total Sale: ₹", total)
+
+if st.button("Save Fuel Sale"):
+
+    cursor.execute(
+    "INSERT INTO fuel_sales (date,staff,fuel,opening,closing,litres,price,total) VALUES (?,?,?,?,?,?,?,?)",
+    (str(sale_date),staff,fuel,opening,closing,litres,price,total)
+    )
+
+    conn.commit()
+
+    st.success("Fuel Sale Saved")
+
+# ---------------- SALES HISTORY ----------------
+
+st.subheader("Fuel Sales Records")
+
+sales_df = pd.read_sql("SELECT * FROM fuel_sales",conn)
+
+st.dataframe(sales_df,use_container_width=True)
+
+# ---------------- CASH COUNTER ----------------
 
 st.header("💰 Cash Counter")
 
-col1, col2, col3 = st.columns(3)
+c1,c2,c3 = st.columns(3)
 
-with col1:
+with c1:
     transaction_type = st.selectbox(
-        "Transaction Type",
-        ["Receipt","Payment","Bank Transfer","Bank Deposit"]
+    "Transaction Type",
+    ["Receipt","Payment","Bank Transfer","Bank Deposit"]
     )
 
-with col2:
-    amount = st.number_input(
-        "Amount (₹)",
-        min_value=0.0,
-        step=1.0
-    )
+with c2:
+    amount = st.number_input("Amount ₹",min_value=0.0)
 
-with col3:
-    cash_date = st.date_input(
-        "Date",
-        date.today()
-    )
+with c3:
+    cash_date = st.date_input("Cash Date",date.today())
 
 note = st.text_input("Note")
 
-# ---------- SAVE ----------
-
 if st.button("Save Transaction"):
 
-    new_transaction = {
-        "type": transaction_type,
-        "amount": amount,
-        "date": str(cash_date),
-        "note": note
-    }
+    cursor.execute(
+    "INSERT INTO cash_transactions (date,type,amount,note) VALUES (?,?,?,?)",
+    (str(cash_date),transaction_type,amount,note)
+    )
 
-    db.child("cash_transactions").push(new_transaction)
+    conn.commit()
 
-    st.success("Saved")
+    st.success("Transaction Saved")
 
-# ---------- LOAD DATA ----------
+# ---------------- CASH DATA ----------------
 
-cash_data = db.child("cash_transactions").get()
+cash_df = pd.read_sql("SELECT * FROM cash_transactions",conn)
 
-records = []
+if not cash_df.empty:
 
-if cash_data.each():
+    cash_df["date"] = pd.to_datetime(cash_df["date"])
 
-    for item in cash_data.each():
-
-        data = item.val()
-        data["id"] = item.key()
-
-        records.append(data)
-
-df = pd.DataFrame(records)
-
-# ---------- SHOW DATA ----------
-
-if not df.empty:
-
-    df["date"] = pd.to_datetime(df["date"])
-
-    receipts = df[df["type"]=="Receipt"]["amount"].sum()
-    payments = df[df["type"]=="Payment"]["amount"].sum()
-    transfers = df[df["type"]=="Bank Transfer"]["amount"].sum()
-    deposits = df[df["type"]=="Bank Deposit"]["amount"].sum()
+    receipts = cash_df[cash_df["type"]=="Receipt"]["amount"].sum()
+    payments = cash_df[cash_df["type"]=="Payment"]["amount"].sum()
+    transfers = cash_df[cash_df["type"]=="Bank Transfer"]["amount"].sum()
+    deposits = cash_df[cash_df["type"]=="Bank Deposit"]["amount"].sum()
 
     balance = receipts - payments - transfers - deposits
 
     st.subheader("Cash Summary")
 
-    c1,c2,c3,c4,c5 = st.columns(5)
+    a,b,c,d,e = st.columns(5)
 
-    c1.metric("Receipts", receipts)
-    c2.metric("Payments", payments)
-    c3.metric("Transfers", transfers)
-    c4.metric("Deposits", deposits)
-    c5.metric("Cash Balance", balance)
+    a.metric("Receipts",receipts)
+    b.metric("Payments",payments)
+    c.metric("Transfers",transfers)
+    d.metric("Deposits",deposits)
+    e.metric("Cash Balance",balance)
 
-    st.subheader("Transactions")
+# ---------------- TRANSACTION HISTORY ----------------
 
-    st.dataframe(df)
+st.subheader("Cash Transactions")
 
-    # ---------- DAILY BALANCE ----------
+st.dataframe(cash_df,use_container_width=True)
 
-    st.subheader("Daily Balance")
+# ---------------- DAILY BALANCE ----------------
 
-    daily = df.groupby(df["date"].dt.date).apply(
-        lambda x:
-        x[x["type"]=="Receipt"]["amount"].sum()
-        - x[x["type"]=="Payment"]["amount"].sum()
-        - x[x["type"]=="Bank Transfer"]["amount"].sum()
-        - x[x["type"]=="Bank Deposit"]["amount"].sum()
+if not cash_df.empty:
+
+    st.subheader("📅 Daily Balance")
+
+    daily = cash_df.groupby(cash_df["date"].dt.date).apply(
+    lambda x:
+    x[x["type"]=="Receipt"]["amount"].sum()
+    - x[x["type"]=="Payment"]["amount"].sum()
+    - x[x["type"]=="Bank Transfer"]["amount"].sum()
+    - x[x["type"]=="Bank Deposit"]["amount"].sum()
     ).reset_index(name="Daily Balance")
 
-    st.dataframe(daily)
+    st.dataframe(daily,use_container_width=True)
 
-    # ---------- MONTHLY BALANCE ----------
+# ---------------- MONTHLY BALANCE ----------------
 
-    st.subheader("Monthly Balance")
+    st.subheader("📆 Monthly Balance")
 
-    df["month"] = df["date"].dt.to_period("M")
+    cash_df["month"] = cash_df["date"].dt.to_period("M")
 
-    monthly = df.groupby("month").apply(
-        lambda x:
-        x[x["type"]=="Receipt"]["amount"].sum()
-        - x[x["type"]=="Payment"]["amount"].sum()
-        - x[x["type"]=="Bank Transfer"]["amount"].sum()
-        - x[x["type"]=="Bank Deposit"]["amount"].sum()
+    monthly = cash_df.groupby("month").apply(
+    lambda x:
+    x[x["type"]=="Receipt"]["amount"].sum()
+    - x[x["type"]=="Payment"]["amount"].sum()
+    - x[x["type"]=="Bank Transfer"]["amount"].sum()
+    - x[x["type"]=="Bank Deposit"]["amount"].sum()
     ).reset_index(name="Monthly Balance")
 
     monthly["month"] = monthly["month"].astype(str)
 
-    st.dataframe(monthly)
+    st.dataframe(monthly,use_container_width=True)
