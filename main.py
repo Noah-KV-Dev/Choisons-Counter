@@ -363,7 +363,7 @@ if st.button("Generate Today Report"):
 
 st.header("Final Cash Account Summary")
 
-# CASH DATA
+# CASH BALANCE
 if not cash_df.empty:
 
     total_receipts = cash_df[cash_df["type"]=="Receipt"]["amount"].sum()
@@ -410,6 +410,7 @@ col3.metric("Advance Given", total_adv_paid)
 col4.metric("Advance Received", total_adv_received)
 
 st.metric("FINAL CASH IN HAND", final_balance)
+
 
 
 
