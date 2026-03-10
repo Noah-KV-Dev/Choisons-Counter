@@ -6,6 +6,8 @@ from datetime import date
 # ---------------- PAGE ----------------
 st.set_page_config(page_title="Petrol Pump Cash Counter", layout="wide")
 st.title("⛽ Petrol Pump Cash Counter")
+st.text("Opening Balance")
+
 
 # ---------------- DATABASE ----------------
 conn = sqlite3.connect("petrol_cash.db", check_same_thread=False)
@@ -265,3 +267,4 @@ else:
 
         st.session_state.login = False
         st.rerun()
+
