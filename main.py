@@ -6,11 +6,13 @@ from datetime import date
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Choisons Counter", layout="wide")
 st.title("⛽ Choisons Petroleum Counter")
+st.markdown("<p style='text-align:right;font-size:12px;color:gray;'>Created by Nazeeh</p>", unsafe_allow_html=True)
 
 # ---------------- DATABASE ----------------
 conn = sqlite3.connect("counter.db", check_same_thread=False)
 cursor = conn.cursor()
 
+# Transactions table
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS transactions(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,6 +24,7 @@ note TEXT
 )
 """)
 
+# Staff advance table
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS staff_advance(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,6 +36,7 @@ note TEXT
 )
 """)
 
+# Staff list table
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS staff(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,23 +85,36 @@ if not st.session_state.login:
 else:
 
     st.sidebar.success(f"User : {st.session_state.user}")
+    st.sidebar.header("Menu")
 
-    menu = st.sidebar.selectbox(
-        "Select Menu",
-        [
-            "Opening Balance",
-            "Transaction Entry",
-            "Staff Advance",
-            "Add Staff",
-            "Balances",
-            "Collection Dashboard",
-            "Transaction History",
-            "Staff Advance Summary",
-            "Daily Balance",
-            "Monthly Balance",
-            "Logout"
-        ]
-    )
+    # ---------------- SIDEBAR BUTTONS ----------------
+    menu = st.session_state.get("menu","Opening Balance")  # Default menu
+
+    if st.sidebar.button("Opening Balance"):
+        st.session_state.menu = "Opening Balance"
+    if st.sidebar.button("Transaction Entry"):
+        st.session_state.menu = "Transaction Entry"
+    if st.sidebar.button("Staff Advance"):
+        st.session_state.menu = "Staff Advance"
+    if st.sidebar.button("Add Staff"):
+        st.session_state.menu = "Add Staff"
+    if st.sidebar.button("Balances"):
+        st.session_state.menu = "Balances"
+    if st.sidebar.button("Collection Dashboard"):
+        st.session_state.menu = "Collection Dashboard"
+    if st.sidebar.button("Transaction History"):
+        st.session_state.menu = "Transaction History"
+    if st.sidebar.button("Staff Advance Summary"):
+        st.session_state.menu = "Staff Advance Summary"
+    if st.sidebar.button("Daily Balance"):
+        st.session_state.menu = "Daily Balance"
+    if st.sidebar.button("Monthly Balance"):
+        st.session_state.menu = "Monthly Balance"
+    if st.sidebar.button("Logout"):
+        st.session_state.login=False
+        st.rerun()
+
+    menu = st.session_state.get("menu","Opening Balance")  # fetch selected menu
 
     # ---------------- LOAD DATA ----------------
     cash_df = pd.read_sql("SELECT * FROM transactions",conn)
@@ -217,35 +234,37 @@ else:
         st.header("Staff Advance")
 
         staff_names = staff_df["name"].tolist()
+        if not staff_names:
+            st.info("No staff available. Add staff first.")
+        else:
+            col1,col2,col3 = st.columns(3)
 
-        col1,col2,col3 = st.columns(3)
+            with col1:
+                staff = st.selectbox("Select Staff",staff_names)
 
-        with col1:
-            staff = st.selectbox("Select Staff",staff_names)
+            with col2:
+                adv_type = st.selectbox(
+                    "Advance Type",
+                    ["Advance Paid","Advance Received"]
+                )
 
-        with col2:
-            adv_type = st.selectbox(
-                "Advance Type",
-                ["Advance Paid","Advance Received"]
-            )
+            with col3:
+                amount = st.number_input("Amount ₹",min_value=0.0)
 
-        with col3:
-            amount = st.number_input("Amount ₹",min_value=0.0)
+            adv_date = st.date_input("Date",today)
 
-        adv_date = st.date_input("Date",today)
+            note = st.text_input("Note")
 
-        note = st.text_input("Note")
+            if st.button("Save Advance"):
 
-        if st.button("Save Advance"):
+                cursor.execute(
+                    "INSERT INTO staff_advance (date,staff,type,amount,note) VALUES (?,?,?,?,?)",
+                    (str(adv_date),staff,adv_type,amount,note)
+                )
 
-            cursor.execute(
-                "INSERT INTO staff_advance (date,staff,type,amount,note) VALUES (?,?,?,?,?)",
-                (str(adv_date),staff,adv_type,amount,note)
-            )
+                conn.commit()
 
-            conn.commit()
-
-            st.success("Advance Saved")
+                st.success("Advance Saved")
 
 # ---------------- BALANCE CALCULATIONS ----------------
 
@@ -369,12 +388,6 @@ else:
             monthly["month"] = monthly["month"].astype(str)
 
             st.dataframe(monthly)
-
-# ---------------- LOGOUT ----------------
-    if menu == "Logout":
-
-        st.session_state.login=False
-        st.rerun()
 
 # ---------------- FOOTER ----------------
 st.markdown("---")
