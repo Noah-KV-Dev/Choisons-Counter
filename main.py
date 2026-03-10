@@ -7,7 +7,7 @@ from datetime import date
 st.set_page_config(page_title="Petrol Pump Cash Counter", layout="wide")
 st.title("⛽ Petrol Pump Cash Counter")
 st.markdown(
-    "<p style='text-align:right;'>(created by nazeeh)</p>",
+    "<p style='text-align:right;'>(Created By Nazeeh)</p>",
     unsafe_allow_html=True
 )
 
@@ -269,6 +269,7 @@ else:
 
         st.session_state.login = False
         st.rerun()
+
 
 
 
