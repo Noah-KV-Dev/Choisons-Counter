@@ -96,11 +96,21 @@ else:
     st.success(f"Logged in as {st.session_state.user}")
 
 
-    # ---------------- OPENING BALANCE ----------------
-    st.header("Opening Balance")
+   # ---------------- OPENING BALANCE ----------------
 
-    opening = st.number_input("Opening Cash ₹", min_value=0.0)
+st.header("Opening Balance")
 
+opening = st.number_input(
+    f"{st.session_state.user} Opening Cash ₹",
+    min_value=0.0,
+    key="opening_balance"
+)
+
+# store opening in session for each cashier
+if "openings" not in st.session_state:
+    st.session_state.openings = {}
+
+st.session_state.openings[st.session_state.user] = opening
 
     # ---------------- TRANSACTION ENTRY ----------------
     st.header("Cash Transactions")
@@ -181,64 +191,80 @@ else:
         cash_df["date"] = pd.to_datetime(cash_df["date"])
 
 
-    # ---------------- CASH BALANCE ----------------
-    st.header("Cash Balance")
+   # ---------------- CASH BALANCE ----------------
 
-    if not cash_df.empty:
+st.header("Cash Balance")
 
-        receipts = cash_df[cash_df["type"].isin(["Receipt","Credit Receipt","Bank Withdrawal"])]["amount"].sum()
+total_opening = sum(st.session_state.openings.values())
 
-        payments = cash_df[cash_df["type"].isin(["Payment","Bank Deposit","Paytm","SBI","KDC"])]["amount"].sum()
+if not cash_df.empty:
 
-        closing = opening + receipts - payments
+    incoming_types = ["Receipt","Credit Receipt","Bank Withdrawal"]
+    outgoing_types = ["Payment","Bank Deposit","Paytm","SBI","KDC"]
 
-    else:
-        receipts = 0
-        payments = 0
-        closing = opening
+    incoming = cash_df[cash_df["type"].isin(incoming_types)]["amount"].sum()
+    outgoing = cash_df[cash_df["type"].isin(outgoing_types)]["amount"].sum()
 
+else:
 
-    c1,c2,c3 = st.columns(3)
+    incoming = 0
+    outgoing = 0
 
-    c1.metric("Opening", opening)
-    c2.metric("Incoming", receipts)
-    c3.metric("Outgoing", payments)
+closing = total_opening + incoming - outgoing
 
-    st.metric("Closing Cash Balance", closing)
+c1,c2,c3,c4 = st.columns(4)
 
+c1.metric("Total Opening", total_opening)
+c2.metric("Incoming", incoming)
+c3.metric("Outgoing", outgoing)
+c4.metric("Closing Cash", closing)
 
-    # ---------------- TRANSACTION HISTORY ----------------
-    st.header("Transaction History")
+   # ---------------- TRANSACTION HISTORY ----------------
 
-    if not cash_df.empty:
+st.header("Transaction History")
 
-        st.dataframe(cash_df)
+opening_rows = []
 
-        st.write("Total Transaction Amount ₹", cash_df["amount"].sum())
+for cashier, value in st.session_state.openings.items():
+    opening_rows.append({
+        "id": "-",
+        "date": str(date.today()),
+        "cashier": cashier,
+        "type": "Opening Balance",
+        "amount": value,
+        "note": "Opening Cash"
+    })
 
+opening_df = pd.DataFrame(opening_rows)
 
-    # ---------------- ADMIN EDIT ----------------
-    if st.session_state.role == "Admin" and not cash_df.empty:
+if not cash_df.empty:
+    history_df = pd.concat([opening_df, cash_df], ignore_index=True)
+else:
+    history_df = opening_df
 
-        st.header("Edit Transaction")
+st.dataframe(history_df)
 
-        tid = st.selectbox("Transaction ID", cash_df["id"])
+st.write("Total Amount ₹", history_df["amount"].sum())
 
-        row = cash_df[cash_df["id"]==tid].iloc[0]
+   # ---------------- ADMIN DELETE ----------------
 
-        new_amt = st.number_input("Edit Amount", value=float(row["amount"]))
-        new_note = st.text_input("Edit Note", value=row["note"])
+if st.session_state.role == "Admin" and not cash_df.empty:
 
-        if st.button("Update Transaction"):
+    st.header("Delete Transaction")
 
-            cursor.execute(
-                "UPDATE cash_transactions SET amount=?,note=? WHERE id=?",
-                (new_amt,new_note,tid)
-            )
+    delete_id = st.selectbox("Select Transaction ID", cash_df["id"])
 
-            conn.commit()
-            st.success("Transaction Updated")
+    if st.button("Delete Transaction"):
 
+        cursor.execute(
+            "DELETE FROM cash_transactions WHERE id=?",
+            (delete_id,)
+        )
+
+        conn.commit()
+
+        st.success("Transaction Deleted")
+        st.rerun()
 
     # ---------------- DAILY BALANCE ----------------
     if not cash_df.empty:
@@ -294,3 +320,4 @@ else:
 
         st.session_state.login = False
         st.rerun()
+
