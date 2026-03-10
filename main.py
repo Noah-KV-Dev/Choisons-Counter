@@ -6,7 +6,11 @@ from datetime import date
 # ---------------- PAGE ----------------
 st.set_page_config(page_title="Petrol Pump Cash Counter", layout="wide")
 st.title("⛽ Petrol Pump Cash Counter")
-st.text("Created By Nazeeh")
+st.markdown(
+    """
+    <h2 style='text-align: right; font-weight: bold;'>Created By Nazeeh</h2>
+    """,
+    unsafe_allow_html=True("Created By Nazeeh")
 
 
 # ---------------- DATABASE ----------------
@@ -267,5 +271,6 @@ else:
 
         st.session_state.login = False
         st.rerun()
+
 
 
