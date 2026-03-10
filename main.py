@@ -5,8 +5,11 @@ from datetime import date
 
 # ---------------- PAGE ----------------
 st.set_page_config(page_title="Petrol Pump Cash Counter", layout="wide")
-st.title("⛽ Petrol Pump Cash Counter"),
-st.text("(created by nazeeh)", align_text="right")
+st.title("⛽ Petrol Pump Cash Counter")
+st.markdown(
+    "<p style='text-align:right;'>(created by nazeeh)</p>",
+    unsafe_allow_html=True
+)
 
 # ---------------- DATABASE ----------------
 conn = sqlite3.connect("petrol_cash.db", check_same_thread=False)
@@ -266,6 +269,7 @@ else:
 
         st.session_state.login = False
         st.rerun()
+
 
 
 
