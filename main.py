@@ -279,7 +279,38 @@ else:
 
         monthly["Incoming"] = monthly[incoming_types].sum(axis=1)
 
-        monthly["Outgoing"] = monthly[outgoing_types].sum(axis=1)
+        monthly["Outgoing"] = monthly[outgoing_types].sum(axi# ---------------- MONTHLY ACCOUNT ----------------
+
+st.subheader("Monthly Cash Account")
+
+if not cash_df.empty:
+
+    cash_df["month"] = cash_df["date"].dt.to_period("M")
+
+    monthly = cash_df.groupby(["month","type"])["amount"].sum().unstack(fill_value=0)
+
+    # SAFE incoming calculation
+    monthly["Incoming"] = (
+        monthly.get("Receipt",0)
+        + monthly.get("Credit Receipt",0)
+        + monthly.get("Bank Withdrawal",0)
+    )
+
+    # SAFE outgoing calculation
+    monthly["Outgoing"] = (
+        monthly.get("Payment",0)
+        + monthly.get("Bank Deposit",0)
+        + monthly.get("Paytm",0)
+        + monthly.get("SBI",0)
+        + monthly.get("KDC",0)
+    )
+
+    monthly["Closing"] = opening + monthly["Incoming"] - monthly["Outgoing"]
+
+    monthly = monthly.reset_index()
+    monthly["month"] = monthly["month"].astype(str)
+
+    st.dataframe(monthly)s=1)
 
         monthly["Closing"] = opening + monthly["Incoming"] - monthly["Outgoing"]
 
@@ -287,3 +318,4 @@ else:
         monthly["month"] = monthly["month"].astype(str)
 
         st.dataframe(monthly)
+
