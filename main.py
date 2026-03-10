@@ -365,40 +365,47 @@ if menu == "Transaction History":
         st.info("No transactions today")
 
 # ---------------- STAFF ADVANCE SUMMARY ----------------
-    if menu == "Staff Advance":
+if menu == "Staff Advance Summary":
 
-        st.header("Staff Advance")
+    st.header("Staff Advance Summary")
 
-        staff_names = staff_df["name"].tolist()
+    if staff_df.empty:
+        st.info("No staff available. Add staff first.")
+    else:
 
-        col1,col2,col3 = st.columns(3)
+        # Initialize empty summary with all staff
+        summary = pd.DataFrame(staff_df["name"])
+        summary.columns = ["Staff"]
 
-        with col1:
-            staff = st.selectbox("Select Staff",staff_names)
-
-        with col2:
-            adv_type = st.selectbox(
-                "Advance Type",
-                ["Advance Paid","Advance Received"]
+        if not advance_df.empty:
+            # Paid
+            paid_sum = (
+                advance_df[advance_df["type"]=="Advance Paid"]
+                .groupby("staff")["amount"]
+                .sum()
+                .reset_index()
             )
+            paid_sum.columns = ["Staff","Advance Paid"]
 
-        with col3:
-            amount = st.number_input("Amount ₹",min_value=0.0)
-
-        adv_date = st.date_input("Date",today)
-
-        note = st.text_input("Note")
-
-        if st.button("Save Advance"):
-
-            cursor.execute(
-                "INSERT INTO staff_advance (date,staff,type,amount,note) VALUES (?,?,?,?,?)",
-                (str(adv_date),staff,adv_type,amount,note)
+            # Received
+            received_sum = (
+                advance_df[advance_df["type"]=="Advance Received"]
+                .groupby("staff")["amount"]
+                .sum()
+                .reset_index()
             )
+            received_sum.columns = ["Staff","Advance Received"]
 
-            conn.commit()
+            # Merge both with all staff
+            summary = summary.merge(paid_sum, on="Staff", how="left")
+            summary = summary.merge(received_sum, on="Staff", how="left")
+            summary = summary.fillna(0)
 
-            st.success("Advance Saved")
+        else:
+            summary["Advance Paid"] = 0
+            summary["Advance Received"] = 0
+
+        st.dataframe(summary)
 # ---------------- DAILY BALANCE ----------------
     if menu == "Daily Balance":
 
@@ -428,5 +435,6 @@ if menu == "Transaction History":
 # ---------------- FOOTER ----------------
 st.markdown("---")
 st.markdown("<p style='text-align:right;font-size:12px;color:gray;'>Created by Nazeeh</p>", unsafe_allow_html=True)
+
 
 
