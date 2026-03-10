@@ -328,20 +328,41 @@ else:
         d1.metric("Total Sales",f"₹{total_sales:,.2f}")
         d2.metric("Total Collection",f"₹{cash_in:,.2f}")
 
-# ---------------- TRANSACTION HISTORY ----------------
-    if menu == "Transaction History":
+# ---------------- TRANSACTION HISTORY WITH ADMIN DELETE ----------------
+if menu == "Transaction History":
 
-        st.header("Today Transactions")
+    st.header("Today Transactions")
 
-        if not cash_df.empty:
+    if not cash_df.empty:
 
-            today_df = cash_df[cash_df["date"].dt.date == today]
+        today_df = cash_df[cash_df["date"].dt.date == today]
+
+        if today_df.empty:
+            st.info("No transactions today")
+        else:
 
             st.dataframe(today_df)
 
-        else:
+            if st.session_state.role == "Admin":
+                st.subheader("Delete Transactions (Admin Only)")
 
-            st.info("No transactions today")
+                # Select transaction to delete
+                trans_id = st.selectbox(
+                    "Select Transaction ID to Delete",
+                    today_df["id"].tolist()
+                )
+
+                if st.button("Delete Transaction"):
+                    # Delete from DB
+                    cursor.execute(
+                        "DELETE FROM transactions WHERE id=?",
+                        (trans_id,)
+                    )
+                    conn.commit()
+                    st.success(f"Transaction ID {trans_id} deleted")
+                    st.experimental_rerun()
+    else:
+        st.info("No transactions today")
 
 # ---------------- STAFF ADVANCE SUMMARY ----------------
     if menu == "Staff Advance Summary":
@@ -392,3 +413,4 @@ else:
 # ---------------- FOOTER ----------------
 st.markdown("---")
 st.markdown("<p style='text-align:right;font-size:12px;color:gray;'>Created by Nazeeh</p>", unsafe_allow_html=True)
+
