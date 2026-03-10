@@ -3,7 +3,8 @@ import pandas as pd
 import sqlite3
 from datetime import date
 
-st.set_page_config(page_title="Petrol Pump Cash System", layout="wide")
+st.set_page_config(page_title="Petrol Pump Cash Counter", layout="wide")
+
 st.title("⛽ Petrol Pump Cash Counter")
 
 # ---------------- DATABASE ----------------
@@ -53,13 +54,13 @@ if "login" not in st.session_state:
 ADMIN_USER = "admin"
 ADMIN_PASS = "admin123"
 
-# ---------------- LOGIN PAGE ----------------
+# ---------------- LOGIN ----------------
 
 if not st.session_state.login:
 
     st.header("Login")
 
-    role = st.selectbox("Login as", ["Cashier", "Admin"])
+    role = st.selectbox("Login as", ["Cashier","Admin"])
     user = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
@@ -81,7 +82,7 @@ if not st.session_state.login:
 
             df = pd.read_sql("SELECT * FROM cashiers", conn)
 
-            check = df[(df["name"] == user) & (df["password"] == password)]
+            check = df[(df["name"]==user) & (df["password"]==password)]
 
             if not check.empty:
 
@@ -99,11 +100,17 @@ else:
 
     st.success(f"Logged in as {st.session_state.user}")
 
-    # ---------------- ADMIN PANEL ----------------
+    if st.button("Logout"):
+        st.session_state.login = False
+        st.rerun()
+
+    st.divider()
+
+# ---------------- ADMIN PANEL ----------------
 
     if st.session_state.role == "Admin":
 
-        st.header("Admin Panel")
+        st.subheader("Admin Panel")
 
         new_name = st.text_input("Cashier Name")
         new_pass = st.text_input("Cashier Password")
@@ -111,32 +118,40 @@ else:
         if st.button("Add Cashier"):
 
             cursor.execute(
-                "INSERT INTO cashiers (name,password) VALUES (?,?)",
-                (new_name, new_pass)
+            "INSERT INTO cashiers (name,password) VALUES (?,?)",
+            (new_name,new_pass)
             )
 
             conn.commit()
             st.success("Cashier added")
 
-        st.subheader("Cashiers")
-        st.dataframe(pd.read_sql("SELECT * FROM cashiers", conn))
+        st.dataframe(pd.read_sql("SELECT * FROM cashiers",conn))
 
-    # ---------------- OPENING CASH ----------------
+# ---------------- OPENING CASH ----------------
 
-    st.header("Opening Cash")
+    st.subheader("Opening Cash")
+
     opening = st.number_input("Opening Cash ₹", min_value=0.0)
 
-    # ---------------- CASH TRANSACTIONS ----------------
+# ---------------- TRANSACTION ENTRY ----------------
 
-    st.header("Cash Transactions")
+    st.subheader("Add Transaction")
 
-    col1, col2, col3 = st.columns(3)
+    col1,col2,col3 = st.columns(3)
+
+    transaction_types = [
+        "Receipt",
+        "Credit Receipt",
+        "Bank Withdrawal",
+        "Payment",
+        "Bank Deposit",
+        "Paytm",
+        "SBI",
+        "KDC"
+    ]
 
     with col1:
-        t_type = st.selectbox(
-            "Transaction Type",
-            ["Receipt", "Payment", "Bank Transfer", "Bank Deposit"]
-        )
+        t_type = st.selectbox("Transaction Type", transaction_types)
 
     with col2:
         amount = st.number_input("Amount ₹", min_value=0.0)
@@ -149,179 +164,126 @@ else:
     if st.button("Save Transaction"):
 
         cursor.execute(
-            "INSERT INTO cash_transactions (date,cashier,type,amount,note) VALUES (?,?,?,?,?)",
-            (str(t_date), st.session_state.user, t_type, amount, note)
+        "INSERT INTO cash_transactions (date,cashier,type,amount,note) VALUES (?,?,?,?,?)",
+        (str(t_date),st.session_state.user,t_type,amount,note)
         )
 
         conn.commit()
         st.success("Transaction saved")
 
-    # ---------------- STAFF ADVANCE ----------------
+# ---------------- LOAD DATA ----------------
 
-    st.header("Staff Advance")
-
-    a1, a2, a3, a4 = st.columns(4)
-
-    with a1:
-        staff = st.text_input("Staff Name")
-
-    with a2:
-        adv_type = st.selectbox(
-            "Type",
-            ["Advance Payment", "Advance Received"]
-        )
-
-    with a3:
-        adv_amt = st.number_input("Advance Amount ₹", min_value=0.0)
-
-    with a4:
-        adv_date = st.date_input("Advance Date", date.today())
-
-    adv_note = st.text_input("Advance Note")
-
-    if st.button("Save Advance"):
-
-        cursor.execute(
-            "INSERT INTO staff_advance (date,staff,type,amount,note) VALUES (?,?,?,?,?)",
-            (str(adv_date), staff, adv_type, adv_amt, adv_note)
-        )
-
-        conn.commit()
-        st.success("Advance saved")
-
-    # ---------------- LOAD DATA ----------------
-
-    cash_df = pd.read_sql("SELECT * FROM cash_transactions", conn)
-    adv_df = pd.read_sql("SELECT * FROM staff_advance", conn)
+    cash_df = pd.read_sql("SELECT * FROM cash_transactions",conn)
 
     if not cash_df.empty:
         cash_df["date"] = pd.to_datetime(cash_df["date"])
 
-    if not adv_df.empty:
-        adv_df["date"] = pd.to_datetime(adv_df["date"])
+# ---------------- CASH EQUATIONS ----------------
 
-    # ---------------- CASH EQUATIONS ----------------
+    incoming_types = ["Receipt","Credit Receipt","Bank Withdrawal"]
 
-    receipts = payments = transfers = deposits = 0
-    adv_paid = adv_received = 0
+    outgoing_types = ["Payment","Bank Deposit","Paytm","SBI","KDC"]
+
+    incoming = 0
+    outgoing = 0
 
     if not cash_df.empty:
 
-        receipts = cash_df[cash_df["type"] == "Receipt"]["amount"].sum()
-        payments = cash_df[cash_df["type"] == "Payment"]["amount"].sum()
-        transfers = cash_df[cash_df["type"] == "Bank Transfer"]["amount"].sum()
-        deposits = cash_df[cash_df["type"] == "Bank Deposit"]["amount"].sum()
+        incoming = cash_df[cash_df["type"].isin(incoming_types)]["amount"].sum()
 
-    if not adv_df.empty:
+        outgoing = cash_df[cash_df["type"].isin(outgoing_types)]["amount"].sum()
 
-        adv_paid = adv_df[adv_df["type"] == "Advance Payment"]["amount"].sum()
-        adv_received = adv_df[adv_df["type"] == "Advance Received"]["amount"].sum()
+    closing = opening + incoming - outgoing
 
-    closing = (
-        opening
-        + receipts
-        + adv_received
-        - payments
-        - adv_paid
-        - transfers
-        - deposits
-    )
+# ---------------- DASHBOARD ----------------
 
-    # ---------------- CASH SUMMARY ----------------
+    st.subheader("Cash Summary")
 
-    st.header("Cash Summary")
+    c1,c2,c3,c4 = st.columns(4)
 
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    c1.metric("Opening Cash", opening)
+    c2.metric("Incoming", incoming)
+    c3.metric("Outgoing", outgoing)
+    c4.metric("System Cash", closing)
 
-    c1.metric("Opening", opening)
-    c2.metric("Receipts", receipts)
-    c3.metric("Payments", payments)
-    c4.metric("Transfers", transfers)
-    c5.metric("Deposits", deposits)
-    c6.metric("System Cash", closing)
+# ---------------- TRANSACTION HISTORY ----------------
 
-  # ---------------- TRANSACTION HISTORY ----------------
+    st.subheader("Transaction History")
 
-st.header("Transaction History")
+    if not cash_df.empty:
 
-if not cash_df.empty:
+        total_amount = cash_df["amount"].sum()
 
-    # Create opening transaction row
-    opening_row = pd.DataFrame({
-        "id": ["-"],
-        "date": [pd.to_datetime(date.today())],
-        "cashier": ["SYSTEM"],
-        "type": ["Opening Balance"],
-        "amount": [opening],
-        "note": ["Opening Cash"]
-    })
+        st.write(f"Total Transaction Amount: ₹ {total_amount}")
 
-    # Combine opening with real transactions
-    display_df = pd.concat([opening_row, cash_df], ignore_index=True)
+        st.dataframe(cash_df)
 
-    st.dataframe(display_df)
+# ---------------- ADMIN EDIT ----------------
 
-else:
+        if st.session_state.role == "Admin":
 
-    opening_row = pd.DataFrame({
-        "id": ["-"],
-        "date": [pd.to_datetime(date.today())],
-        "cashier": ["SYSTEM"],
-        "type": ["Opening Balance"],
-        "amount": [opening],
-        "note": ["Opening Cash"]
-    })
+            st.subheader("Edit Transaction")
 
-    st.dataframe(opening_row)
-    # ---------------- PHYSICAL CASH CHECK ----------------
+            tid = st.selectbox("Transaction ID", cash_df["id"])
 
-    st.header("Physical Cash Check")
+            row = cash_df[cash_df["id"]==tid].iloc[0]
 
-    closing_cash = st.number_input("Enter Physical Cash ₹", min_value=0.0)
+            new_amt = st.number_input("Edit Amount", value=float(row["amount"]))
+            new_note = st.text_input("Edit Note", value=row["note"])
 
-    difference = closing_cash - closing
+            if st.button("Update Transaction"):
 
-    if closing_cash > 0:
+                cursor.execute(
+                "UPDATE cash_transactions SET amount=?,note=? WHERE id=?",
+                (new_amt,new_note,tid)
+                )
 
-        if difference == 0:
-            st.success("✔ Cash matched")
+                conn.commit()
+                st.success("Transaction updated")
 
-        elif difference < 0:
-            st.error(f"Cash Shortage ₹ {abs(difference)}")
+# ---------------- DAILY REPORT ----------------
 
-        else:
-            st.warning(f"Extra Cash ₹ {difference}")
+    st.subheader("Daily Cash Report")
 
-    # ---------------- MONTHLY CASH ACCOUNT ----------------
+    if st.button("Generate Today Report"):
 
-    st.header("Monthly Cash Account")
+        if not cash_df.empty:
+
+            today = pd.to_datetime(date.today())
+
+            today_data = cash_df[cash_df["date"].dt.date == today.date()]
+
+            incoming_today = today_data[today_data["type"].isin(incoming_types)]["amount"].sum()
+            outgoing_today = today_data[today_data["type"].isin(outgoing_types)]["amount"].sum()
+
+            balance_today = opening + incoming_today - outgoing_today
+
+            report = pd.DataFrame({
+                "Opening":[opening],
+                "Incoming":[incoming_today],
+                "Outgoing":[outgoing_today],
+                "System Balance":[balance_today]
+            })
+
+            st.dataframe(report)
+
+# ---------------- MONTHLY ACCOUNT ----------------
+
+    st.subheader("Monthly Cash Account")
 
     if not cash_df.empty:
 
         cash_df["month"] = cash_df["date"].dt.to_period("M")
 
-        monthly_account = (
-            cash_df.groupby(["month", "type"])["amount"]
-            .sum()
-            .unstack(fill_value=0)
-        )
+        monthly = cash_df.groupby(["month","type"])["amount"].sum().unstack(fill_value=0)
 
-        monthly_account["Closing"] = (
-            opening
-            + monthly_account.get("Receipt", 0)
-            - monthly_account.get("Payment", 0)
-            - monthly_account.get("Bank Transfer", 0)
-            - monthly_account.get("Bank Deposit", 0)
-        )
+        monthly["Incoming"] = monthly[incoming_types].sum(axis=1)
 
-        monthly_account = monthly_account.reset_index()
-        monthly_account["month"] = monthly_account["month"].astype(str)
+        monthly["Outgoing"] = monthly[outgoing_types].sum(axis=1)
 
-        st.dataframe(monthly_account)
+        monthly["Closing"] = opening + monthly["Incoming"] - monthly["Outgoing"]
 
-    # ---------------- LOGOUT ----------------
+        monthly = monthly.reset_index()
+        monthly["month"] = monthly["month"].astype(str)
 
-    if st.button("Logout"):
-        st.session_state.login = False
-        st.rerun()
-
+        st.dataframe(monthly)
