@@ -10,8 +10,6 @@ st.markdown(
     """
     <h2 style='text-align: right; font-weight: bold;'>Created By Nazeeh</h2>
     """,
-    unsafe_allow_html=True("Created By Nazeeh")
-
 
 # ---------------- DATABASE ----------------
 conn = sqlite3.connect("petrol_cash.db", check_same_thread=False)
@@ -271,6 +269,7 @@ else:
 
         st.session_state.login = False
         st.rerun()
+
 
 
 
