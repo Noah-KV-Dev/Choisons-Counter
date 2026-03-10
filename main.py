@@ -413,34 +413,89 @@ if menu == "Staff Advance Summary":
 
         st.dataframe(summary)
 # ---------------- DAILY BALANCE ----------------
-    if menu == "Daily Balance":
+if menu == "Daily Balance":
 
-        st.header("Daily Balance")
+    st.header("Daily Balance")
 
-        if not cash_df.empty:
+    if cash_df.empty:
+        st.info("No transactions yet")
+    else:
+        # Define incoming and outgoing types
+        incoming_types = [
+            "Opening Balance",
+            "Sales",
+            "Receipt",
+            "Credit Receipt",
+            "Bank Withdrawal",
+            "Paytm Receipt"
+        ]
 
-            daily = cash_df.groupby(cash_df["date"].dt.date)["amount"].sum().reset_index()
+        outgoing_types = [
+            "Payment",
+            "Bank Deposit",
+            "Paytm Payment",
+            "SBI",
+            "KDC"
+        ]
 
-            st.dataframe(daily)
+        # Calculate daily totals
+        daily_summary = cash_df.groupby(cash_df["date"].dt.date).apply(
+            lambda x: pd.Series({
+                "Incoming": x[x["type"].isin(incoming_types)]["amount"].sum(),
+                "Outgoing": x[x["type"].isin(outgoing_types)]["amount"].sum(),
+                "Net Balance": x[x["type"].isin(incoming_types)]["amount"].sum()
+                               - x[x["type"].isin(outgoing_types)]["amount"].sum()
+            })
+        ).reset_index()
+        daily_summary.rename(columns={"date":"Date"}, inplace=True)
+
+        st.dataframe(daily_summary, use_container_width=True)
 
 # ---------------- MONTHLY BALANCE ----------------
-    if menu == "Monthly Balance":
+if menu == "Monthly Balance":
 
-        st.header("Monthly Balance")
+    st.header("Monthly Balance")
 
-        if not cash_df.empty:
+    if cash_df.empty:
+        st.info("No transactions yet")
+    else:
+        # Add month column
+        cash_df["month"] = cash_df["date"].dt.to_period("M")
 
-            cash_df["month"] = cash_df["date"].dt.to_period("M")
+        incoming_types = [
+            "Opening Balance",
+            "Sales",
+            "Receipt",
+            "Credit Receipt",
+            "Bank Withdrawal",
+            "Paytm Receipt"
+        ]
 
-            monthly = cash_df.groupby("month")["amount"].sum().reset_index()
+        outgoing_types = [
+            "Payment",
+            "Bank Deposit",
+            "Paytm Payment",
+            "SBI",
+            "KDC"
+        ]
 
-            monthly["month"] = monthly["month"].astype(str)
+        # Calculate monthly totals
+        monthly_summary = cash_df.groupby("month").apply(
+            lambda x: pd.Series({
+                "Incoming": x[x["type"].isin(incoming_types)]["amount"].sum(),
+                "Outgoing": x[x["type"].isin(outgoing_types)]["amount"].sum(),
+                "Net Balance": x[x["type"].isin(incoming_types)]["amount"].sum()
+                               - x[x["type"].isin(outgoing_types)]["amount"].sum()
+            })
+        ).reset_index()
+        monthly_summary["month"] = monthly_summary["month"].astype(str)
+        monthly_summary.rename(columns={"month":"Month"}, inplace=True)
 
-            st.dataframe(monthly)
-
+        st.dataframe(monthly_summary, use_container_width=True)
 # ---------------- FOOTER ----------------
 st.markdown("---")
 st.markdown("<p style='text-align:right;font-size:12px;color:gray;'>Created by Nazeeh</p>", unsafe_allow_html=True)
+
 
 
 
