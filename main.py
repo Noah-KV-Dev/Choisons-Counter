@@ -365,25 +365,40 @@ if menu == "Transaction History":
         st.info("No transactions today")
 
 # ---------------- STAFF ADVANCE SUMMARY ----------------
-    if menu == "Staff Advance Summary":
+    if menu == "Staff Advance":
 
-        st.header("Staff Advance Summary")
+        st.header("Staff Advance")
 
-        if not advance_df.empty:
+        staff_names = staff_df["name"].tolist()
 
-            paid = advance_df[advance_df["type"]=="Advance Paid"]
-            received = advance_df[advance_df["type"]=="Advance Received"]
+        col1,col2,col3 = st.columns(3)
 
-            paid_sum = paid.groupby("staff")["amount"].sum()
-            received_sum = received.groupby("staff")["amount"].sum()
+        with col1:
+            staff = st.selectbox("Select Staff",staff_names)
 
-            summary = pd.DataFrame({
-                "Advance Paid": paid_sum,
-                "Advance Received": received_sum
-            }).fillna(0)
+        with col2:
+            adv_type = st.selectbox(
+                "Advance Type",
+                ["Advance Paid","Advance Received"]
+            )
 
-            st.dataframe(summary)
+        with col3:
+            amount = st.number_input("Amount ₹",min_value=0.0)
 
+        adv_date = st.date_input("Date",today)
+
+        note = st.text_input("Note")
+
+        if st.button("Save Advance"):
+
+            cursor.execute(
+                "INSERT INTO staff_advance (date,staff,type,amount,note) VALUES (?,?,?,?,?)",
+                (str(adv_date),staff,adv_type,amount,note)
+            )
+
+            conn.commit()
+
+            st.success("Advance Saved")
 # ---------------- DAILY BALANCE ----------------
     if menu == "Daily Balance":
 
@@ -413,4 +428,5 @@ if menu == "Transaction History":
 # ---------------- FOOTER ----------------
 st.markdown("---")
 st.markdown("<p style='text-align:right;font-size:12px;color:gray;'>Created by Nazeeh</p>", unsafe_allow_html=True)
+
 
