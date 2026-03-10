@@ -409,7 +409,7 @@ if menu == "Staff Advance Summary":
             summary["Advance Received"] = 0
 
         # Calculate balance
-        summary["Balance"] = summary["Advance Paid"] - summary["Advance Received"]
+        summary["Balance"] = summary ["Advance Received"]- summary["Advance Paid"]
 
         st.dataframe(summary)
 # ---------------- DAILY BALANCE ----------------
@@ -441,6 +441,7 @@ if menu == "Staff Advance Summary":
 # ---------------- FOOTER ----------------
 st.markdown("---")
 st.markdown("<p style='text-align:right;font-size:12px;color:gray;'>Created by Nazeeh</p>", unsafe_allow_html=True)
+
 
 
 
