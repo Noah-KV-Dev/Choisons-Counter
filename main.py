@@ -369,15 +369,17 @@ if menu == "Staff Advance Summary":
 
     st.header("Staff Advance Summary")
 
+    # Check if staff table is empty
     if staff_df.empty:
         st.info("No staff available. Add staff first.")
     else:
-
-        # Initialize empty summary with all staff
+        # Initialize summary with all staff
         summary = pd.DataFrame(staff_df["name"])
         summary.columns = ["Staff"]
 
+        # If advance data exists, calculate Paid and Received
         if not advance_df.empty:
+
             # Paid
             paid_sum = (
                 advance_df[advance_df["type"]=="Advance Paid"]
@@ -396,23 +398,18 @@ if menu == "Staff Advance Summary":
             )
             received_sum.columns = ["Staff","Advance Received"]
 
-            # Merge both with all staff
+            # Merge with all staff, fill missing with 0
             summary = summary.merge(paid_sum, on="Staff", how="left")
             summary = summary.merge(received_sum, on="Staff", how="left")
-            summary = summary.fillna(0)
-
-            # Add Net Balance column
-            summary["Balance"] = summary["Advance Paid"] - summary["Advance Received"]
+            summary.fillna(0, inplace=True)
 
         else:
+            # No advance records yet
             summary["Advance Paid"] = 0
             summary["Advance Received"] = 0
-            summary["Balance"] = 0
 
-        st.dataframe(summary)
-        else:
-            summary["Advance Paid"] = 0
-            summary["Advance Received"] = 0
+        # Calculate balance
+        summary["Balance"] = summary["Advance Paid"] - summary["Advance Received"]
 
         st.dataframe(summary)
 # ---------------- DAILY BALANCE ----------------
@@ -444,6 +441,7 @@ if menu == "Staff Advance Summary":
 # ---------------- FOOTER ----------------
 st.markdown("---")
 st.markdown("<p style='text-align:right;font-size:12px;color:gray;'>Created by Nazeeh</p>", unsafe_allow_html=True)
+
 
 
 
