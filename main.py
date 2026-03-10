@@ -6,21 +6,10 @@ from datetime import date
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Petrol Pump Cash Counter", layout="wide")
 st.title("⛽ Petrol Pump Cash Counter")
-st.markdown(
-    "<p style='text-align:right;'>(Created By Nazeeh)</p>",
-    unsafe_allow_html=True
 
 # ---------------- DATABASE ----------------
 conn = sqlite3.connect("petrol_cash.db", check_same_thread=False)
 cursor = conn.cursor()
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS cashiers(
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-name TEXT,
-password TEXT
-)
-""")
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS cash_transactions(
@@ -69,17 +58,10 @@ if not st.session_state.login:
                 st.error("Wrong admin login")
 
         else:
-
-            df = pd.read_sql("SELECT * FROM cashiers", conn)
-            check = df[(df["name"] == user) & (df["password"] == password)]
-
-            if not check.empty:
-                st.session_state.login = True
-                st.session_state.role = "Cashier"
-                st.session_state.user = user
-                st.rerun()
-            else:
-                st.error("Invalid cashier")
+            st.session_state.login = True
+            st.session_state.role = "Cashier"
+            st.session_state.user = user
+            st.rerun()
 
 # ---------------- SYSTEM ----------------
 else:
@@ -141,7 +123,7 @@ else:
     if not cash_df.empty:
         cash_df["date"] = pd.to_datetime(cash_df["date"])
 
-    # ---------------- OPENING TOTAL ----------------
+    # ---------------- TOTAL OPENING ----------------
     total_opening = sum(st.session_state.openings.values())
 
     # ---------------- BALANCE TYPES ----------------
@@ -154,7 +136,6 @@ else:
     sbi_types = ["SBI"]
     kdc_types = ["KDC"]
 
-    # ---------------- BALANCE CALCULATION ----------------
     if not cash_df.empty:
 
         cash_in = cash_df[cash_df["type"].isin(cash_in_types)]["amount"].sum()
@@ -168,19 +149,14 @@ else:
 
     else:
 
-        cash_in = 0
-        cash_out = 0
-        paytm_in = 0
-        paytm_out = 0
-        sbi_total = 0
-        kdc_total = 0
+        cash_in = cash_out = paytm_in = paytm_out = sbi_total = kdc_total = 0
 
     cash_balance = total_opening + cash_in - cash_out
     paytm_balance = paytm_in - paytm_out
     sbi_balance = -sbi_total
     kdc_balance = -kdc_total
 
-    # ---------------- BALANCE DASHBOARD ----------------
+    # ---------------- BALANCES ----------------
     st.header("Balances")
 
     b1, b2, b3, b4 = st.columns(4)
@@ -216,7 +192,7 @@ else:
 
     st.write("Total Transaction Amount ₹", history_df["amount"].sum())
 
-    # ---------------- ADMIN DELETE TRANSACTION ----------------
+    # ---------------- ADMIN DELETE ----------------
     if st.session_state.role == "Admin" and not cash_df.empty:
 
         st.header("Delete Transaction")
@@ -241,6 +217,7 @@ else:
         st.header("Daily Balance")
 
         daily = cash_df.groupby(cash_df["date"].dt.date)["amount"].sum().reset_index()
+
         st.dataframe(daily)
 
     # ---------------- MONTHLY BALANCE ----------------
@@ -249,7 +226,9 @@ else:
         st.header("Monthly Balance")
 
         cash_df["month"] = cash_df["date"].dt.to_period("M")
+
         monthly = cash_df.groupby("month")["amount"].sum().reset_index()
+
         monthly["month"] = monthly["month"].astype(str)
 
         st.dataframe(monthly)
@@ -285,7 +264,4 @@ else:
 
 # ---------------- FOOTER ----------------
 st.markdown("---")
-st.markdown(
-    "<p style='text-align:right; font-size:12px; color:gray;'>Created by Nazeeh</p>",
-    unsafe_allow_html=True
-)
+st.markdown("<p style='text-align:right; font-size:12px; color:gray;'>Created by Nazeeh</p>", unsafe_allow_html=True)
