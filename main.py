@@ -1,64 +1,55 @@
-# ---------------- IMPORTS ----------------
 import streamlit as st
 import pandas as pd
 import sqlite3
 from datetime import date
 
-
-# ---------------- PAGE CONFIG ----------------
+# ---------------- PAGE ----------------
 st.set_page_config(page_title="Petrol Pump Cash Counter", layout="wide")
 st.title("⛽ Petrol Pump Cash Counter")
-
 
 # ---------------- DATABASE ----------------
 conn = sqlite3.connect("petrol_cash.db", check_same_thread=False)
 cursor = conn.cursor()
 
-# Create tables
-cursor.execute("""CREATE TABLE IF NOT EXISTS cashiers(
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS cashiers(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 name TEXT,
 password TEXT
-)""")
+)
+""")
 
-cursor.execute("""CREATE TABLE IF NOT EXISTS cash_transactions(
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS cash_transactions(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 date TEXT,
 cashier TEXT,
 type TEXT,
 amount REAL,
 note TEXT
-)""")
-
-cursor.execute("""CREATE TABLE IF NOT EXISTS staff_advance(
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-date TEXT,
-staff TEXT,
-type TEXT,
-amount REAL,
-note TEXT
-)""")
+)
+""")
 
 conn.commit()
 
-
-# ---------------- LOGIN SESSION ----------------
+# ---------------- SESSION ----------------
 if "login" not in st.session_state:
     st.session_state.login = False
     st.session_state.role = ""
     st.session_state.user = ""
 
+if "openings" not in st.session_state:
+    st.session_state.openings = {}
 
 ADMIN_USER = "admin"
 ADMIN_PASS = "admin123"
-
 
 # ---------------- LOGIN ----------------
 if not st.session_state.login:
 
     st.header("Login")
 
-    role = st.selectbox("Login as", ["Cashier","Admin"])
+    role = st.selectbox("Login as", ["Cashier", "Admin"])
     user = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
@@ -67,6 +58,7 @@ if not st.session_state.login:
         if role == "Admin":
 
             if user == ADMIN_USER and password == ADMIN_PASS:
+
                 st.session_state.login = True
                 st.session_state.role = "Admin"
                 st.session_state.user = user
@@ -78,9 +70,10 @@ if not st.session_state.login:
         else:
 
             df = pd.read_sql("SELECT * FROM cashiers", conn)
-            check = df[(df["name"]==user) & (df["password"]==password)]
+            check = df[(df["name"] == user) & (df["password"] == password)]
 
             if not check.empty:
+
                 st.session_state.login = True
                 st.session_state.role = "Cashier"
                 st.session_state.user = user
@@ -89,46 +82,38 @@ if not st.session_state.login:
             else:
                 st.error("Invalid cashier")
 
-
 # ---------------- SYSTEM ----------------
 else:
 
     st.success(f"Logged in as {st.session_state.user}")
 
+    # ---------------- OPENING BALANCE ----------------
+    st.header("Opening Balance")
 
-   # ---------------- OPENING BALANCE ----------------
+    opening = st.number_input(
+        f"{st.session_state.user} Opening Cash ₹",
+        min_value=0.0
+    )
 
-st.header("Opening Balance")
-
-opening = st.number_input(
-    f"{st.session_state.user} Opening Cash ₹",
-    min_value=0.0,
-    key="opening_balance"
-)
-
-# store opening in session for each cashier
-if "openings" not in st.session_state:
-    st.session_state.openings = {}
-
-st.session_state.openings[st.session_state.user] = opening
+    st.session_state.openings[st.session_state.user] = opening
 
     # ---------------- TRANSACTION ENTRY ----------------
     st.header("Cash Transactions")
 
-    col1,col2,col3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         t_type = st.selectbox(
             "Transaction Type",
             [
-            "Receipt",
-            "Credit Receipt",
-            "Bank Withdrawal",
-            "Payment",
-            "Bank Deposit",
-            "Paytm",
-            "SBI",
-            "KDC"
+                "Receipt",
+                "Credit Receipt",
+                "Bank Withdrawal",
+                "Payment",
+                "Bank Deposit",
+                "Paytm",
+                "SBI",
+                "KDC"
             ]
         )
 
@@ -144,45 +129,11 @@ st.session_state.openings[st.session_state.user] = opening
 
         cursor.execute(
             "INSERT INTO cash_transactions (date,cashier,type,amount,note) VALUES (?,?,?,?,?)",
-            (str(t_date),st.session_state.user,t_type,amount,note)
+            (str(t_date), st.session_state.user, t_type, amount, note)
         )
 
         conn.commit()
         st.success("Transaction saved")
-
-
-    # ---------------- STAFF ADVANCE ----------------
-    st.header("Staff Advance")
-
-    a1,a2,a3,a4 = st.columns(4)
-
-    with a1:
-        staff = st.text_input("Staff Name")
-
-    with a2:
-        adv_type = st.selectbox(
-            "Type",
-            ["Advance Payment","Advance Received"]
-        )
-
-    with a3:
-        adv_amt = st.number_input("Advance Amount ₹", min_value=0.0)
-
-    with a4:
-        adv_date = st.date_input("Advance Date", date.today())
-
-    adv_note = st.text_input("Advance Note")
-
-    if st.button("Save Advance"):
-
-        cursor.execute(
-            "INSERT INTO staff_advance (date,staff,type,amount,note) VALUES (?,?,?,?,?)",
-            (str(adv_date),staff,adv_type,adv_amt,adv_note)
-        )
-
-        conn.commit()
-        st.success("Advance saved")
-
 
     # ---------------- LOAD DATA ----------------
     cash_df = pd.read_sql("SELECT * FROM cash_transactions", conn)
@@ -190,81 +141,78 @@ st.session_state.openings[st.session_state.user] = opening
     if not cash_df.empty:
         cash_df["date"] = pd.to_datetime(cash_df["date"])
 
+    # ---------------- CASH BALANCE ----------------
+    st.header("Cash Balance")
 
-   # ---------------- CASH BALANCE ----------------
+    total_opening = sum(st.session_state.openings.values())
 
-st.header("Cash Balance")
+    incoming_types = ["Receipt", "Credit Receipt", "Bank Withdrawal"]
+    outgoing_types = ["Payment", "Bank Deposit", "Paytm", "SBI", "KDC"]
 
-total_opening = sum(st.session_state.openings.values())
+    if not cash_df.empty:
 
-if not cash_df.empty:
+        incoming = cash_df[cash_df["type"].isin(incoming_types)]["amount"].sum()
+        outgoing = cash_df[cash_df["type"].isin(outgoing_types)]["amount"].sum()
 
-    incoming_types = ["Receipt","Credit Receipt","Bank Withdrawal"]
-    outgoing_types = ["Payment","Bank Deposit","Paytm","SBI","KDC"]
+    else:
 
-    incoming = cash_df[cash_df["type"].isin(incoming_types)]["amount"].sum()
-    outgoing = cash_df[cash_df["type"].isin(outgoing_types)]["amount"].sum()
+        incoming = 0
+        outgoing = 0
 
-else:
+    closing = total_opening + incoming - outgoing
 
-    incoming = 0
-    outgoing = 0
+    c1, c2, c3, c4 = st.columns(4)
 
-closing = total_opening + incoming - outgoing
+    c1.metric("Total Opening", total_opening)
+    c2.metric("Incoming", incoming)
+    c3.metric("Outgoing", outgoing)
+    c4.metric("Closing Cash", closing)
 
-c1,c2,c3,c4 = st.columns(4)
+    # ---------------- TRANSACTION HISTORY ----------------
+    st.header("Transaction History")
 
-c1.metric("Total Opening", total_opening)
-c2.metric("Incoming", incoming)
-c3.metric("Outgoing", outgoing)
-c4.metric("Closing Cash", closing)
+    opening_rows = []
 
-   # ---------------- TRANSACTION HISTORY ----------------
+    for cashier, value in st.session_state.openings.items():
 
-st.header("Transaction History")
+        opening_rows.append({
+            "id": "-",
+            "date": str(date.today()),
+            "cashier": cashier,
+            "type": "Opening Balance",
+            "amount": value,
+            "note": "Opening Cash"
+        })
 
-opening_rows = []
+    opening_df = pd.DataFrame(opening_rows)
 
-for cashier, value in st.session_state.openings.items():
-    opening_rows.append({
-        "id": "-",
-        "date": str(date.today()),
-        "cashier": cashier,
-        "type": "Opening Balance",
-        "amount": value,
-        "note": "Opening Cash"
-    })
+    if not cash_df.empty:
+        history_df = pd.concat([opening_df, cash_df], ignore_index=True)
+    else:
+        history_df = opening_df
 
-opening_df = pd.DataFrame(opening_rows)
+    st.dataframe(history_df)
 
-if not cash_df.empty:
-    history_df = pd.concat([opening_df, cash_df], ignore_index=True)
-else:
-    history_df = opening_df
+    st.write("Total Transaction Amount ₹", history_df["amount"].sum())
 
-st.dataframe(history_df)
+    # ---------------- ADMIN DELETE ----------------
+    if st.session_state.role == "Admin" and not cash_df.empty:
 
-st.write("Total Amount ₹", history_df["amount"].sum())
+        st.header("Delete Transaction")
 
-   # ---------------- ADMIN DELETE ----------------
+        delete_id = st.selectbox("Select Transaction ID", cash_df["id"])
 
-if st.session_state.role == "Admin" and not cash_df.empty:
+        if st.button("Delete Transaction"):
 
-    st.header("Delete Transaction")
+            cursor.execute(
+                "DELETE FROM cash_transactions WHERE id=?",
+                (delete_id,)
+            )
 
-    delete_id = st.selectbox("Select Transaction ID", cash_df["id"])
+            conn.commit()
 
-    if st.button("Delete Transaction"):
-
-        cursor.execute(
-            "DELETE FROM cash_transactions WHERE id=?",
-            (delete_id,)
-        )
-
-        conn.commit()
-
-        st.success("Transaction Deleted")
-        st.rerun()
+            st.success("Transaction Deleted")
+            st.rerun()
 
     # ---------------- DAILY BALANCE ----------------
     if not cash_df.empty:
@@ -274,7 +222,6 @@ if st.session_state.role == "Admin" and not cash_df.empty:
         daily = cash_df.groupby(cash_df["date"].dt.date)["amount"].sum().reset_index()
 
         st.dataframe(daily)
-
 
     # ---------------- MONTHLY BALANCE ----------------
     if not cash_df.empty:
@@ -289,8 +236,7 @@ if st.session_state.role == "Admin" and not cash_df.empty:
 
         st.dataframe(monthly)
 
-
-    # ---------------- REPORT ----------------
+    # ---------------- TODAY REPORT ----------------
     st.header("Daily Cash Report")
 
     if st.button("Generate Today Report"):
@@ -304,9 +250,9 @@ if st.session_state.role == "Admin" and not cash_df.empty:
             total = today_data["amount"].sum()
 
             report = pd.DataFrame({
-                "Opening":[opening],
-                "Today Total":[total],
-                "Closing":[closing]
+                "Opening": [total_opening],
+                "Today Total": [total],
+                "Closing": [closing]
             })
 
             st.dataframe(report)
@@ -314,10 +260,8 @@ if st.session_state.role == "Admin" and not cash_df.empty:
         else:
             st.info("No transactions today")
 
-
     # ---------------- LOGOUT ----------------
     if st.button("Logout"):
 
         st.session_state.login = False
         st.rerun()
-
