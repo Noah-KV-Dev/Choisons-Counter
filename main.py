@@ -6,8 +6,10 @@ from datetime import date
 # ---------------- PAGE ----------------
 st.set_page_config(page_title="Petrol Pump Cash Counter", layout="wide")
 st.title("⛽ Petrol Pump Cash Counter")
-st.dataframe("<h1 style='text-align: right;'>Created by Nazeeh</h1>", unsafe_allow_html=True)
-
+# Use markdown with inline CSS for right alignment
+st.markdown(
+    "<p style='text-align: right;'>(Created by Nazeeh)</p>", 
+    unsafe_allow_html=True
 # ---------------- DATABASE ----------------
 conn = sqlite3.connect("petrol_cash.db", check_same_thread=False)
 cursor = conn.cursor()
@@ -266,6 +268,7 @@ else:
 
         st.session_state.login = False
         st.rerun()
+
 
 
 
