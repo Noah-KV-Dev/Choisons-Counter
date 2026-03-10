@@ -401,6 +401,15 @@ if menu == "Staff Advance Summary":
             summary = summary.merge(received_sum, on="Staff", how="left")
             summary = summary.fillna(0)
 
+            # Add Net Balance column
+            summary["Balance"] = summary["Advance Paid"] - summary["Advance Received"]
+
+        else:
+            summary["Advance Paid"] = 0
+            summary["Advance Received"] = 0
+            summary["Balance"] = 0
+
+        st.dataframe(summary)
         else:
             summary["Advance Paid"] = 0
             summary["Advance Received"] = 0
@@ -435,6 +444,7 @@ if menu == "Staff Advance Summary":
 # ---------------- FOOTER ----------------
 st.markdown("---")
 st.markdown("<p style='text-align:right;font-size:12px;color:gray;'>Created by Nazeeh</p>", unsafe_allow_html=True)
+
 
 
 
