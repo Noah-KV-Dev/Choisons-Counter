@@ -6,6 +6,9 @@ from datetime import date
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Petrol Pump Cash Counter", layout="wide")
 st.title("⛽ Petrol Pump Cash Counter")
+st.markdown(
+    "<p style='text-align:right;'>(Created By Nazeeh)</p>",
+    unsafe_allow_html=True
 
 # ---------------- DATABASE ----------------
 conn = sqlite3.connect("petrol_cash.db", check_same_thread=False)
@@ -265,3 +268,4 @@ else:
 # ---------------- FOOTER ----------------
 st.markdown("---")
 st.markdown("<p style='text-align:right; font-size:12px; color:gray;'>Created by Nazeeh</p>", unsafe_allow_html=True)
+
