@@ -6,6 +6,7 @@ from datetime import date
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Choisons Counter", layout="wide")
 st.title("⛽ Choisons Petroleum Counter")
+st.markdown("<p style='text-align:right; font-size:12px; color:gray;'>Created by Nazeeh</p>", unsafe_allow_html=True)
 
 # ---------------- DATABASE ----------------
 conn = sqlite3.connect("counter.db", check_same_thread=False)
@@ -40,9 +41,6 @@ if "login" not in st.session_state:
     st.session_state.login = False
     st.session_state.role = ""
     st.session_state.user = ""
-
-if "openings" not in st.session_state:
-    st.session_state.openings = {}
 
 ADMIN_USER = "admin"
 ADMIN_PASS = "admin123"
@@ -104,50 +102,37 @@ else:
     if not advance_df.empty:
         advance_df["date"] = pd.to_datetime(advance_df["date"])
 
-    # ---------------- BALANCE CALCULATIONS ----------------
-
-    cash_in_types = ["Sales","Receipt","Credit Receipt","Bank Withdrawal"]
-    cash_out_types = ["Payment","Bank Deposit"]
-
-    paytm_in_types = ["Paytm Receipt"]
-    paytm_out_types = ["Paytm Payment"]
-
-    sbi_types = ["SBI"]
-    kdc_types = ["KDC"]
-
-    if not cash_df.empty:
-
-        cash_in = cash_df[cash_df["type"].isin(cash_in_types)]["amount"].sum()
-        cash_out = cash_df[cash_df["type"].isin(cash_out_types)]["amount"].sum()
-
-        paytm_in = cash_df[cash_df["type"].isin(paytm_in_types)]["amount"].sum()
-        paytm_out = cash_df[cash_df["type"].isin(paytm_out_types)]["amount"].sum()
-
-        sbi_total = cash_df[cash_df["type"].isin(sbi_types)]["amount"].sum()
-        kdc_total = cash_df[cash_df["type"].isin(kdc_types)]["amount"].sum()
-
-    else:
-
-        cash_in=cash_out=paytm_in=paytm_out=sbi_total=kdc_total=0
-
-    total_opening = sum(st.session_state.openings.values())
-
-    cash_balance = total_opening + cash_in - cash_out
-    paytm_balance = paytm_in - paytm_out
-    sbi_balance = -sbi_total
-    kdc_balance = -kdc_total
+    today = date.today()
 
     # ---------------- OPENING BALANCE ----------------
     if menu == "Opening Balance":
 
         st.header("Opening Balance")
 
-        opening = st.number_input(
-            f"{st.session_state.user} Opening Cash ₹",
-            min_value=0.0
+        today_check = pd.read_sql(
+            f"SELECT * FROM transactions WHERE type='Opening Balance' AND date='{today}'",
+            conn
         )
 
-        st.session_state.openings[st.session_state.user] = opening
+        if today_check.empty:
+
+            opening = st.number_input("Opening Cash ₹", min_value=0.0)
+
+            if st.button("Save Opening Balance"):
+
+                cursor.execute(
+                    "INSERT INTO transactions (date,cashier,type,amount,note) VALUES (?,?,?,?,?)",
+                    (str(today),st.session_state.user,"Opening Balance",opening,"Day Opening")
+                )
+
+                conn.commit()
+
+                st.success("Opening Balance Saved")
+
+        else:
+
+            st.success("Opening balance already saved today")
+            st.dataframe(today_check)
 
     # ---------------- TRANSACTION ENTRY ----------------
     if menu == "Transaction Entry":
@@ -177,7 +162,7 @@ else:
             amount = st.number_input("Amount ₹",min_value=0.0)
 
         with col3:
-            t_date = st.date_input("Date",date.today())
+            t_date = st.date_input("Date",today)
 
         note = st.text_input("Note")
 
@@ -189,6 +174,7 @@ else:
             )
 
             conn.commit()
+
             st.success("Transaction Saved")
 
     # ---------------- STAFF ADVANCE ----------------
@@ -198,14 +184,14 @@ else:
 
         col1,col2,col3 = st.columns(3)
 
-        staff_name = col1.text_input("Staff Name")
+        staff = col1.text_input("Staff Name")
 
         adv_type = col2.selectbox(
             "Advance Type",
             ["Advance Paid","Advance Received"]
         )
 
-        adv_amount = col3.number_input("Amount ₹",min_value=0.0)
+        amount = col3.number_input("Amount ₹",min_value=0.0)
 
         adv_date = st.date_input("Advance Date")
 
@@ -215,12 +201,50 @@ else:
 
             cursor.execute(
                 "INSERT INTO staff_advance (date,staff,type,amount,note) VALUES (?,?,?,?,?)",
-                (str(adv_date),staff_name,adv_type,adv_amount,note)
+                (str(adv_date),staff,adv_type,amount,note)
             )
 
             conn.commit()
 
             st.success("Advance Saved")
+
+    # ---------------- BALANCE CALCULATIONS ----------------
+
+    cash_in_types = [
+        "Opening Balance",
+        "Sales",
+        "Receipt",
+        "Credit Receipt",
+        "Bank Withdrawal"
+    ]
+
+    cash_out_types = ["Payment","Bank Deposit"]
+
+    paytm_in_types = ["Paytm Receipt"]
+    paytm_out_types = ["Paytm Payment"]
+
+    sbi_types = ["SBI"]
+    kdc_types = ["KDC"]
+
+    if not cash_df.empty:
+
+        cash_in = cash_df[cash_df["type"].isin(cash_in_types)]["amount"].sum()
+        cash_out = cash_df[cash_df["type"].isin(cash_out_types)]["amount"].sum()
+
+        paytm_in = cash_df[cash_df["type"].isin(paytm_in_types)]["amount"].sum()
+        paytm_out = cash_df[cash_df["type"].isin(paytm_out_types)]["amount"].sum()
+
+        sbi_total = cash_df[cash_df["type"].isin(sbi_types)]["amount"].sum()
+        kdc_total = cash_df[cash_df["type"].isin(kdc_types)]["amount"].sum()
+
+    else:
+
+        cash_in=cash_out=paytm_in=paytm_out=sbi_total=kdc_total=0
+
+    cash_balance = cash_in - cash_out
+    paytm_balance = paytm_in - paytm_out
+    sbi_balance = -sbi_total
+    kdc_balance = -kdc_total
 
     # ---------------- BALANCES ----------------
     if menu == "Balances":
@@ -249,41 +273,17 @@ else:
     # ---------------- TRANSACTION HISTORY ----------------
     if menu == "Transaction History":
 
-        st.header("Transaction History")
-
-        opening_rows=[]
-
-        for cashier,value in st.session_state.openings.items():
-
-            opening_rows.append({
-                "id":"-",
-                "date":str(date.today()),
-                "cashier":cashier,
-                "type":"Opening Balance",
-                "amount":value,
-                "note":"Opening Cash"
-            })
-
-        opening_df=pd.DataFrame(opening_rows)
+        st.header("Today's Transactions")
 
         if not cash_df.empty:
-            history_df=pd.concat([opening_df,cash_df],ignore_index=True)
+
+            today_df = cash_df[cash_df["date"].dt.date == today]
+
+            st.dataframe(today_df)
+
         else:
-            history_df=opening_df
 
-        st.dataframe(history_df)
-
-        if st.session_state.role=="Admin" and not cash_df.empty:
-
-            delete_id=st.selectbox("Delete Transaction ID",cash_df["id"])
-
-            if st.button("Delete Transaction"):
-
-                cursor.execute("DELETE FROM transactions WHERE id=?",(delete_id,))
-                conn.commit()
-
-                st.success("Transaction Deleted")
-                st.rerun()
+            st.info("No transactions today")
 
     # ---------------- STAFF ADVANCE SUMMARY ----------------
     if menu == "Staff Advance Summary":
@@ -316,7 +316,7 @@ else:
 
         if not cash_df.empty:
 
-            daily=cash_df.groupby(cash_df["date"].dt.date)["amount"].sum().reset_index()
+            daily = cash_df.groupby(cash_df["date"].dt.date)["amount"].sum().reset_index()
 
             st.dataframe(daily)
 
@@ -331,11 +331,11 @@ else:
 
         if not cash_df.empty:
 
-            cash_df["month"]=cash_df["date"].dt.to_period("M")
+            cash_df["month"] = cash_df["date"].dt.to_period("M")
 
-            monthly=cash_df.groupby("month")["amount"].sum().reset_index()
+            monthly = cash_df.groupby("month")["amount"].sum().reset_index()
 
-            monthly["month"]=monthly["month"].astype(str)
+            monthly["month"] = monthly["month"].astype(str)
 
             st.dataframe(monthly)
 
