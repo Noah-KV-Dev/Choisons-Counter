@@ -6,7 +6,7 @@ from datetime import date
 # ---------------- PAGE ----------------
 st.set_page_config(page_title="Petrol Pump Cash Counter", layout="wide")
 st.title("⛽ Petrol Pump Cash Counter")
-st.text("Opening Balance")
+st.text("Created By Nazeeh")
 
 
 # ---------------- DATABASE ----------------
@@ -267,4 +267,5 @@ else:
 
         st.session_state.login = False
         st.rerun()
+
 
