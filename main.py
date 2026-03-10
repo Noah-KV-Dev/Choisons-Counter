@@ -6,8 +6,7 @@ from datetime import date
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Petrol Pump Cash Counter", layout="wide")
 st.title("⛽ Petrol Pump Cash Counter")
-st.text(
-    "<p style='text-align:right;'>(Created By Nazeeh)</p>",
+st.markdown( "<p style='text-align:right;'>(Created By Nazeeh)</p>",
     unsafe_allow_html=True
 
 # ---------------- DATABASE ----------------
@@ -268,6 +267,7 @@ else:
 # ---------------- FOOTER ----------------
 st.markdown("---")
 st.markdown("<p style='text-align:right; font-size:12px; color:gray;'>Created by Nazeeh</p>", unsafe_allow_html=True)
+
 
 
 
